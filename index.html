@@ -90,6 +90,26 @@ table.wk textarea{border:0;min-height:96px;padding:6px}
 #view[data-sj=math] .seat.sel,#view[data-sj=math] .btn.on{background:#C94C4C;border-color:#C94C4C;color:#fff}
 #view[data-sj=order] .seat.sel,#view[data-sj=order] .btn.on{background:#3B6FB6;border-color:#3B6FB6;color:#fff}
 
+.pbox div[contenteditable]{min-height:70%;outline:none}
+.pbox div[contenteditable]:focus{background:#F4F6F2;border-radius:10px}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:10px 0}
+.g2 h2{margin:0;font-size:2.4rem}
+.tb{width:100%;border-collapse:collapse;background:#fff}
+.tb th,.tb td{border:1px solid var(--line);padding:4px 8px;text-align:center}
+.tb th{background:var(--soft)}
+.badge{background:#F1D6DD;color:#7A3A4A;border-radius:999px;padding:2px 12px;font-weight:700}
+a.chip{display:inline-flex;align-items:center;text-decoration:none}
+pre.brd{white-space:pre-wrap;font:inherit}
+.ctabs{height:calc(100vh - 340px)}
+.ctabs .ct{display:flex;flex-direction:column}
+.ctabs .cg{flex:1;grid-auto-rows:1fr}
+.ctabs .cg button{min-height:0;font-size:1.8rem}
+.ctabs.n1 .cg button{font-size:3.6rem}
+.ctabs.n2 .cg button{font-size:2.8rem}
+.ctabs.n1 .cth input,.ctabs.n2 .cth input{font-size:2.2rem}
+.ctabs.n1 .cth button,.ctabs.n2 .cth button{min-height:44px;font-size:1rem}
+@media print{#side,header,.bar,.chip,.btn,.bclk{display:none!important}}
+
 </style>
 </head>
 <body>
@@ -193,13 +213,17 @@ function buildProj(b, overlay) {
   const p = document.createElement("div"); p.className = "projw" + (overlay ? " ov" : "");
   p.innerHTML = `<button class="pc" id="pT" style="left:12px;right:auto">＋ 訂正表</button>${overlay ? `<button class="pc" id="pX">✕</button>` : ""}
     <div class="pclk"></div><div class="pdate"></div><div class="pbox">
-    <section><h2>早自修任務：</h2><div>${esc(d ? b.morningTemplates?.[d] : "")}</div></section>
-    <section><h2>聯絡簿：</h2><div>${esc(day.homework)}</div></section></div>`;
+    <section><h2>早自修任務：</h2><div id="pM" contenteditable="true">${esc(d ? (b.morningOverride?.[today()] ?? b.morningTemplates?.[d]) : "")}</div></section>
+    <section><h2>聯絡簿：</h2><div id="pH" contenteditable="true">${esc(day.homework)}</div></section></div>`;
   const clk = () => { const n = new Date();
     p.querySelector(".pclk").textContent = [n.getHours(), n.getMinutes(), n.getSeconds()].map(x => String(x).padStart(2, "0")).join("：");
     p.querySelector(".pdate").textContent = n.toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric", weekday: "long" }); };
   clk(); const iv = (p._iv = setInterval(clk, 1000));
   p.onclick = e => { if (e.target.id === "pX") { clearInterval(iv); p.remove(); } if (e.target.id === "pT") floatTracker(p, b); };
+  p.addEventListener("focusout", async e => { if (!d) return; const v = e.target.innerText.replace(/\n+$/, "");
+    if (e.target.id === "pH") { const wk = weekNo(b, today()); ((b.weeksData ||= {})[wk] ||= {})[d] = { ...(b.weeksData[wk][d] || {}), homework: v }; }
+    else if (e.target.id === "pM") (b.morningOverride ||= {})[today()] = v;
+    else return; await setKV("board", b); });
   return p;
 }
 const openProj = b => document.body.append(buildProj(b, true));
@@ -294,37 +318,85 @@ const corrections = {
 // ---- 加分：先選人（可一鍵全選再取消少數），再按加減分；國語依座位表排列 ----
 const ST = ["準時", "遲到", "缺席", "公差", "請假"], PERIODS = ["遲到", "早自修", "第1節", "第2節", "第3節", "第4節", "午休", "第5節", "第6節", "第7節"];
 const normSt = s => ({ "未到校": "缺席", "公差離班": "公差", "準時到校": "準時", "全勤": "準時" }[s] || s);
+const dlCSV = (name, rows) => { const x = document.createElement("a");
+  x.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv;charset=utf-8" })); x.download = name; x.click(); };
+const wkDates = d => { const m = monday(d); return [0, 1, 2, 3, 4].map(i => { const x = new Date(m); x.setDate(x.getDate() + i); return ymd(x); }); };
+const TABS = [["roll", "點名"], ["board", "今日看板"], ["leave", "請假"], ["duty", "公差"], ["week", "每週週表"], ["term", "期末統計"]];
 const attendance = {
-  id: "attendance", icon: "🗓️", title: "出缺勤", date: today(), period: "早自修", summary: async () => null,
+  id: "attendance", icon: "🗓️", title: "出缺勤", date: today(), period: "早自修", tab: "roll", summary: async () => null,
   async render(el) {
-    const a = await getKV("attendance", {}); a.leaves ||= []; a.attendance ||= {}; a.periodAttendance ||= {};
+    const a = await getKV("attendance", {}); a.leaves ||= []; a.attendance ||= {}; a.periodAttendance ||= {}; a.tempDuties ||= []; a.routineDuties ||= [];
     const list = seatList(), nums = list.map(r => r.seat), names = Object.fromEntries(list.map(r => [r.seat, r.name]));
+    const nm = s => `${s} ${esc(names[s] || "")}`, DN = ["一", "二", "三", "四", "五"];
     const grid = (a.seatGrid || []).map(Number).filter(n => !isNaN(n)).map(s => nums.includes(s) ? s : 0), cells = grid.length ? grid : nums;
     let tm; const persist = () => { clearTimeout(tm); tm = setTimeout(() => setKV("attendance", a), 700); };
     const leaveOf = (s, d) => a.leaves.find(l => +l.seat === s && d >= l.startDate && d <= l.endDate);
-    const stat = s => normSt(a.periodAttendance[this.date]?.[this.period]?.[s]) || (leaveOf(s, this.date) ? "請假" : "準時");
+    const stOf = (d, p, s) => normSt(a.periodAttendance[d]?.[p]?.[s]) || (leaveOf(s, d) ? "請假" : "準時");
+    const eSt = (d, s) => normSt(a.periodAttendance[d]?.["早自修"]?.[s]) || normSt(a.attendance[d]?.[s]) || (leaveOf(s, d) ? "請假" : "準時");
+    const len = l => Math.round((new Date(l.endDate) - new Date(l.startDate)) / 864e5) + 1;
+    const gcal = l => { const z = d => d.replace(/-/g, ""), nx = ymd(new Date(new Date(l.endDate + "T00:00:00").getTime() + 864e5));
+      return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${l.seat}號 ${names[l.seat] || ""} ${l.type || "請假"}`)}&dates=${z(l.startDate)}/${z(nx)}&details=${encodeURIComponent(l.reason || "")}`; };
+    const saveICS = () => { const z = d => d.replace(/-/g, "");
+      const ev = a.leaves.map(l => `BEGIN:VEVENT\nUID:${l.id}@dashboard\nDTSTAMP:${z(today())}T000000Z\nDTSTART;VALUE=DATE:${z(l.startDate)}\nDTEND;VALUE=DATE:${z(ymd(new Date(new Date(l.endDate + "T00:00:00").getTime() + 864e5)))}\nSUMMARY:${l.seat}號 ${names[l.seat] || ""} ${l.type || "請假"}\nDESCRIPTION:${l.reason || ""}\nEND:VEVENT`).join("\n");
+      const x = document.createElement("a"); x.href = URL.createObjectURL(new Blob([("BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//dashboard//\n" + ev + "\nEND:VCALENDAR").replace(/\n/g, "\r\n")], { type: "text/calendar" })); x.download = "請假.ics"; x.click(); };
+    const tables = (head, rows, btn) => `<div class="wrap"><table class="tb"><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</table></div><p><button class="chip" data-csv="${btn}">匯出 CSV</button></p>`;
     el.innerHTML = `<div id="aBody"></div>`; bigClock(el);
-    const draw = () => {
-      const sts = Object.fromEntries(nums.map(s => [s, stat(s)])), cnt = k => nums.filter(s => sts[s] === k);
-      const here = nums.length - cnt("缺席").length - cnt("請假").length - cnt("公差").length;
-      const ls = a.leaves.filter(l => l.endDate >= today()).sort((x, y) => x.startDate.localeCompare(y.startDate));
-      $("#aBody").innerHTML = `<div class="bar"><button class="chip" data-dd="-1">◀</button><b>${this.date}</b><button class="chip" data-dd="1">▶</button><button class="chip" data-dd="0">今天</button></div>
-        <div class="bar">${PERIODS.map(p => `<button class="chip ${p === this.period ? "on" : ""}" data-p="${p}">${p}</button>`).join("")}</div>
-        <div class="brd">應到 ${nums.length}　實到 ${here}　${ST.slice(1).map(k => cnt(k).length ? `${k}：${cnt(k).map(s => s + " " + (names[s] || "")).join("、")}` : "").filter(Boolean).join("　｜　")}</div>
-        <div class="seats" style="grid-template-columns:repeat(6,1fr)">${cells.map(s => s ? `<button class="seat st${ST.indexOf(sts[s])}" data-seat="${s}">${s}<small>${esc(names[s])}</small><b>${sts[s]}</b></button>` : `<span></span>`).join("")}</div>
-        <h3>請假登記</h3><div class="bar"><input id="lS" type="number" placeholder="座號" style="width:90px"><input id="lA" type="date" style="width:170px"><input id="lB" type="date" style="width:170px">
-        <input id="lR" placeholder="原因（選填）" style="width:200px"><button class="btn on" id="lAdd">新增</button></div>
-        ${ls.map(l => `<div class="row"><span>${l.seat} 號 ${esc(names[l.seat])}　${l.startDate}～${l.endDate}　${esc(l.reason || l.type)}</span><button class="chip" data-lr="${l.id}">刪除</button></div>`).join("") || `<p class="muted">目前沒有請假紀錄。</p>`}`;
+    const V = {
+      roll: () => { const sts = Object.fromEntries(nums.map(s => [s, stOf(this.date, this.period, s)]));
+        return `<div class="bar">${PERIODS.map(p => `<button class="chip ${p === this.period ? "on" : ""}" data-p="${p}">${p}</button>`).join("")}</div>
+        <div class="seats" style="grid-template-columns:repeat(6,1fr)">${cells.map(s => s ? `<button class="seat st${ST.indexOf(sts[s])}" data-seat="${s}">${s}<small>${esc(names[s])}</small><b>${sts[s]}</b></button>` : `<span></span>`).join("")}</div>`; },
+      board: () => { const e = Object.fromEntries(nums.map(s => [s, eSt(this.date, s)])), cnt = k => nums.filter(s => e[s] === k), dw = dow(this.date);
+        const td = a.tempDuties.filter(t => t.date === this.date), rd = dw ? a.routineDuties.filter(r => (r.days || []).map(String).some(x => x === String(dw) || x === DN[dw - 1])) : [];
+        const box = (t, it) => `<div class="card"><h3>${t}（${it.length}）</h3>${it.map(x => `<div>${x}</div>`).join("") || `<p class="muted">無</p>`}</div>`;
+        return `<div class="g2"><div class="card"><small>應到</small><h2>${nums.length}</h2></div><div class="card"><small>實到</small><h2>${nums.length - cnt("缺席").length - cnt("請假").length - cnt("公差").length}</h2></div></div>
+        <div class="g2">${box("請假", cnt("請假").map(s => nm(s) + "　" + esc(leaveOf(s, this.date)?.reason || "")))}${box("遲到", cnt("遲到").map(nm))}${box("缺席", cnt("缺席").map(nm))}
+        ${box("公差", [...cnt("公差").map(nm), ...td.map(t => `${nm(+t.seat)}　${esc(t.reason || "")}（${(t.periodsList || []).join("、")}）`), ...rd.map(r => `${nm(+r.seat)}　${esc(r.team)}（例行）`)])}</div>`; },
+      leave: () => { const ls = a.leaves.filter(l => l.endDate >= today()).sort((x, y) => x.startDate.localeCompare(y.startDate));
+        return `<div class="bar"><input id="lS" type="number" placeholder="座號" style="width:90px"><input id="lA" type="date" style="width:170px"><input id="lB" type="date" style="width:170px"><input id="lR" placeholder="原因（選填）" style="width:200px"><button class="btn on" id="lAdd">新增請假</button></div>
+        ${ls.map(l => `<div class="row"><span>${nm(+l.seat)}　${l.startDate}～${l.endDate}（${len(l)} 天）　${esc(l.reason || l.type)} ${len(l) >= 3 ? `<span class="badge">待審核</span>` : ""}</span><span><a class="chip" target="_blank" href="${gcal(l)}">加入 Google 日曆</a> <button class="chip" data-lr="${l.id}">刪除</button></span></div>`).join("") || `<p class="muted">目前沒有請假紀錄。</p>`}
+        <p><button class="chip" id="lIcs">匯出全部 .ics</button></p>`; },
+      duty: () => { const dw = dow(this.date), td = a.tempDuties.filter(t => t.date === this.date), rd = dw ? a.routineDuties.filter(r => (r.days || []).map(String).some(x => x === String(dw) || x === DN[dw - 1])) : [];
+        const q = ["早自修", "第1節", "第2節", "第3節", "第4節", "午休", "第5節", "第6節", "第7節"].map(p => `${p}：${[...nums.filter(s => leaveOf(s, this.date)).map(s => `${nm(s)}(請假)`),
+          ...td.filter(t => (t.periodsList || []).includes(p)).map(t => `${nm(+t.seat)}(${esc(t.reason || "公差")})`), ...(p === "早自修" ? rd.map(r => `${nm(+r.seat)}(${esc(r.team)})`) : [])].join("、") || "無"}`).join("\n");
+        return `<h3>臨時公差</h3><div class="bar"><input id="dS" type="number" placeholder="座號" style="width:90px"><input id="dD" type="date" value="${this.date}" style="width:170px"><input id="dR" placeholder="事由" style="width:180px">
+        ${PERIODS.slice(1).map(p => `<label><input type="checkbox" class="dP" value="${p}" style="width:auto"> ${p}</label>`).join(" ")}<button class="btn on" id="dAdd">新增</button></div>
+        ${a.tempDuties.filter(t => t.date >= today()).map(t => `<div class="row"><span>${nm(+t.seat)}　${t.date}　${(t.periodsList || []).join("、")}　${esc(t.reason || "")}</span><button class="chip" data-dt="${t.id}">刪除</button></div>`).join("")}
+        <h3>例行公差（校隊、社團）</h3><div class="bar"><input id="rS" type="number" placeholder="座號" style="width:90px"><input id="rT" placeholder="隊伍或社團" style="width:180px">${DN.map((n, i) => `<label><input type="checkbox" class="rD" value="${i + 1}" style="width:auto"> 週${n}</label>`).join(" ")}<button class="btn on" id="rAdd">新增</button></div>
+        ${a.routineDuties.map(r => `<div class="row"><span>${nm(+r.seat)}　${esc(r.team)}　${(r.days || []).map(x => /^\d$/.test(x) ? "週" + DN[x - 1] : x).join("、")}</span><button class="chip" data-rt="${r.id}">刪除</button></div>`).join("")}
+        <h3>科任老師缺席快查（${this.date}）</h3><pre class="brd" id="qTxt">${esc(q)}</pre><p><button class="chip" id="qCopy">複製</button> <button class="chip" id="qPrint">列印</button></p>`; },
+      week: () => { const wk = wkDates(this.date);
+        const rows = nums.map(s => { let e = 0, n = 0, c = 0, dt = []; wk.forEach(d => { const ev = []; if (eSt(d, s) === "遲到") { e++; ev.push("早修遲到"); }
+          const nx = stOf(d, "午休", s); if (["遲到", "缺席", "公差"].includes(nx)) { n++; ev.push("午休" + nx); }
+          PERIODS.slice(2).forEach(p => { if (p !== "午休" && stOf(d, p, s) === "遲到") { c++; ev.push(p + "遲到"); } }); if (ev.length) dt.push(d.slice(5) + " " + ev.join("、")); }); return [s, names[s] || "", e, n, c, dt.join("；")]; });
+        this.rows = [["座號", "姓名", "早修遲到", "午休狀況", "課堂遲到", "每日明細"], ...rows];
+        return `<p>${wk[0]} ～ ${wk[4]}（用上方日期切換週次）</p>` + tables(this.rows[0], rows, "week"); },
+      term: () => { const ds = [...new Set([...Object.keys(a.attendance), ...Object.keys(a.periodAttendance)])].sort();
+        const rows = nums.map(s => { let lv = 0, e = 0, c = 0, ab = 0, du = a.tempDuties.filter(t => +t.seat === s).length;
+          a.leaves.filter(l => +l.seat === s).forEach(l => { for (let d = new Date(l.startDate + "T00:00:00"), z = new Date(l.endDate + "T00:00:00"); d <= z; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) lv++; });
+          ds.forEach(d => { const x = eSt(d, s); if (x === "遲到") e++; if (x === "缺席") ab++; if (x === "公差") du++; PERIODS.slice(2).forEach(p => { if (p !== "午休" && stOf(d, p, s) === "遲到") c++; }); }); return [s, names[s] || "", lv, e, c, ab, du]; });
+        this.trows = [["座號", "姓名", "請假天數", "早修遲到", "課堂遲到", "缺席天數", "公差次數"], ...rows];
+        return `<p class="muted">統計範圍：目前已有紀錄的全部日期。</p>` + tables(this.trows[0], rows, "term"); }
     };
-    el.onclick = e => { const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
-      if (d.dd != null) { const dt = new Date(this.date + "T00:00:00"); this.date = +d.dd ? ymd(new Date(dt.setDate(dt.getDate() + +d.dd))) : today(); }
+    const draw = () => { $("#aBody").innerHTML = `<div class="bar">${TABS.map(([k, n]) => `<button class="chip ${k === this.tab ? "on" : ""}" data-tab="${k}">${n}</button>`).join("")}</div>
+      <div class="bar"><button class="chip" data-dd="-1">◀</button><b>${this.date}</b><button class="chip" data-dd="1">▶</button><button class="chip" data-dd="0">今天</button></div>` + V[this.tab](); };
+    el.onclick = e => { const t = e.target.closest("button"); if (!t) return; const d = t.dataset, v = id => $(id).value;
+      if (d.tab) this.tab = d.tab;
+      else if (d.dd != null) { const dt = new Date(this.date + "T00:00:00"); this.date = +d.dd ? ymd(new Date(dt.setDate(dt.getDate() + (this.tab === "week" ? 7 * +d.dd : +d.dd)))) : today(); }
       else if (d.p) this.period = d.p;
-      else if (d.seat) { const s = +d.seat, nx = ST[(ST.indexOf(stat(s)) + 1) % 5];
-        ((a.periodAttendance[this.date] ||= {})[this.period] ||= {})[s] = nx;
-        if (this.period === "早自修") (a.attendance[this.date] ||= {})[s] = nx; persist(); }
+      else if (d.seat) { const s = +d.seat, nx = ST[(ST.indexOf(stOf(this.date, this.period, s)) + 1) % 5];
+        ((a.periodAttendance[this.date] ||= {})[this.period] ||= {})[s] = nx; if (this.period === "早自修") (a.attendance[this.date] ||= {})[s] = nx; persist(); }
       else if (d.lr) { a.leaves = a.leaves.filter(l => l.id !== d.lr); persist(); }
-      else if (t.id === "lAdd") { const s = +$("#lS").value, sd = $("#lA").value; if (!s || !sd) return;
-        a.leaves.push({ id: String(Date.now()), seat: s, type: "請假", reason: $("#lR").value, startDate: sd, endDate: $("#lB").value || sd }); persist(); }
+      else if (d.dt) { a.tempDuties = a.tempDuties.filter(x => x.id !== d.dt); persist(); }
+      else if (d.rt) { a.routineDuties = a.routineDuties.filter(x => x.id !== d.rt); persist(); }
+      else if (d.csv) return dlCSV(`${d.csv === "week" ? "每週點名週表" : "期末出缺勤統計"}_${today()}.csv`, d.csv === "week" ? this.rows : this.trows);
+      else if (t.id === "lAdd") { const s = +v("#lS"), sd = v("#lA"); if (!s || !sd) return; a.leaves.push({ id: String(Date.now()), seat: s, name: names[s] || "", type: "請假", reason: v("#lR"), startDate: sd, endDate: v("#lB") || sd }); persist(); }
+      else if (t.id === "dAdd") { const s = +v("#dS"), pl = [...el.querySelectorAll(".dP:checked")].map(x => x.value); if (!s || !pl.length) return;
+        a.tempDuties.push({ id: "tp_" + Date.now(), seat: s, name: names[s] || "", date: v("#dD") || this.date, periodsList: pl, reason: v("#dR") }); persist(); }
+      else if (t.id === "rAdd") { const s = +v("#rS"), ds = [...el.querySelectorAll(".rD:checked")].map(x => +x.value); if (!s || !v("#rT") || !ds.length) return;
+        a.routineDuties.push({ id: "rt_" + Date.now(), seat: s, name: names[s] || "", team: v("#rT"), days: ds }); persist(); }
+      else if (t.id === "lIcs") return saveICS();
+      else if (t.id === "qCopy") return navigator.clipboard.writeText($("#qTxt").textContent);
+      else if (t.id === "qPrint") return window.print();
       else return;
       draw(); };
     draw();
