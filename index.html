@@ -110,7 +110,7 @@ pre.brd{white-space:pre-wrap;font:inherit}
 .ctabs.n1 .cth button,.ctabs.n2 .cth button{min-height:44px;font-size:1rem}
 @media print{#side,header,.bar,.chip,.btn,.bclk{display:none!important}}
 
-nav button.sep{margin-top:16px}
+
 
 .cth button.warn{background:#F1D6DD;color:#7A3A4A;font-weight:700}
 
@@ -416,10 +416,10 @@ const attendance = {
         const wd = l => { let n = 0; for (let d = new Date(l.startDate + "T00:00:00"), z = new Date(l.endDate + "T00:00:00"); d <= z; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) n++; return n; };
         const rows = nums.map(s => { const lv = LT.map(t => a.leaves.filter(l => +l.seat === s && l.type === t).reduce((x, l) => x + (Number(l.days) || wd(l)), 0));
           let late = 0, ok = 0, ab = 0, du = a.tempDuties.filter(t => +t.seat === s).length;
-          ds.forEach(d => { const x = eSt(d, s); if (x === "遲到") late++; if (x === "準時") ok++; if (x === "缺席") ab++; if (x === "公差") du++; PERIODS.slice(2).forEach(p => { if (p !== "午休" && stOf(d, p, s) === "遲到") late++; }); });
+          ds.forEach(d => { const x = eSt(d, s); if (x === "遲到") late++; if (x === "準時") ok++; if (x === "缺席") ab++; if (x === "公差") du++;  });
           return [s, names[s] || "", ...lv, late, ok, ab, du]; });
-        this.trows = [["座號", "姓名", ...LT.map(t => t + "(天)"), "遲到(次)", "準時(天)", "缺席(天)", "公差(次)"], ...rows];
-        return `<p class="muted">統計範圍：目前已有紀錄的全部日期；遲到含早修與課堂。</p>` + tables(this.trows[0], rows, "term") + `<p><button class="chip" id="qPrint">列印／存為 PDF</button></p>`; }
+        this.trows = [["座號", "姓名", ...LT.map(t => t + "(天)"), "遲到(天)", "準時(天)", "缺席(天)", "公差(次)"], ...rows];
+        return `<p class="muted">統計範圍：目前已有紀錄的全部日期；遲到只計早自修，課堂遲到請看「每週週表」。</p>` + tables(this.trows[0], rows, "term") + `<p><button class="chip" id="qPrint">列印／存為 PDF</button></p>`; }
     };
     const draw = () => { $("#aBody").innerHTML = `<div class="bar">${TABS.map(([k, n]) => `<button class="chip ${k === this.tab ? "on" : ""}" data-tab="${k}">${n}</button>`).join("")}</div>
       <div class="bar"><button class="chip" data-dd="-1">◀</button><b>${this.date}</b><button class="chip" data-dd="1">▶</button><button class="chip" data-dd="0">今天</button></div>` + V[this.tab](); };
@@ -559,7 +559,7 @@ const MODS = [home, corrections, points, attendance, board, data, settings];
 
 function fill() { $("#clsName").textContent = ctx.cfg.className; $("#clsInfo").textContent = `${ctx.roster.length} 位學生`; }
 function go(id) {
-  $("#nav").innerHTML = MODS.map(m => `<button data-go="${m.id}" class="${m.id === id ? "on" : ""}${m.id === "attendance" ? " sep" : ""}"><span>${m.icon}</span><span class="t">${m.title}</span></button>`).join("");
+  $("#nav").innerHTML = MODS.map(m => `<button data-go="${m.id}" class="${m.id === id ? "on" : ""}"><span>${m.icon}</span><span class="t">${m.title}</span></button>`).join("");
   clearInterval(window.__iv); const el = $("#view"); el.onclick = el.onchange = null; el.removeAttribute("data-sj"); el.innerHTML = "";
   Promise.resolve(MODS.find(m => m.id === id).render(el)).catch(err => el.innerHTML = `<div class="card"><h2>這一頁載入失敗</h2><p class="muted">${esc(err.message)}</p></div>`);
 }
