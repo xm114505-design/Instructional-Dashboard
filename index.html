@@ -4,7 +4,58 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>課堂儀表板</title>
-<link rel="stylesheet" href="styles.css">
+<style>
+:root{--bg:#eaf4f1;--ink:#1d3557;--mut:#5f7390;--card:#fff;--acc:#f26b4f;--line:#1d3557;--soft:#dfeceb}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:18px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+.center{min-height:100%;display:grid;place-items:center;padding:24px}
+.card{background:var(--card);border:2px solid var(--soft);border-radius:24px;padding:20px 24px}
+.muted{color:var(--mut)}
+small{color:var(--mut);font-size:.8rem}
+#app{display:flex;height:100%}
+#side{width:260px;flex:none;padding:16px;overflow:auto;background:#fffdf8;border-right:2px solid var(--soft);transition:width .2s}
+.cls{background:var(--card);border:2px solid var(--soft);border-radius:20px;padding:12px 16px;display:grid;margin-bottom:16px}
+.cls b{font-size:1.4rem}
+nav{display:grid;gap:10px}
+nav button{min-height:56px;text-align:left;padding:0 16px;background:var(--card);border:2px solid var(--line);border-bottom-width:5px;border-radius:18px;font-weight:700;display:flex;gap:10px;align-items:center}
+nav button.on{background:var(--acc);color:#fff}
+nav button:active,.btn:active,.seat:active{transform:translateY(2px)}
+.fold #side{width:84px}
+.fold .cls,.fold nav .t{display:none}
+main{flex:1;min-width:0;overflow:auto;padding:16px 24px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+#clock{font-weight:700;font-size:1.3rem}
+.chip,.btn{min-height:48px;padding:0 18px;background:var(--card);border:2px solid var(--line);border-bottom-width:4px;border-radius:16px;font-weight:700}
+.chip.on,.btn.on{background:var(--ink);color:#fff}
+.hero{background:linear-gradient(120deg,#1d3557,#3a7ca5);color:#fff;border-radius:28px;padding:24px 28px;margin-bottom:16px}
+.hero h1{margin:0;font-size:2.6rem}
+.hero small,.hero p{color:#d7e6f2}
+.quick{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.quick .btn.hot{background:var(--acc);color:#fff;border-color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;margin:8px 0;border:2px solid var(--soft);border-radius:16px}
+.badge{background:#fde8e2;color:#b4432b;border-radius:999px;padding:2px 14px;font-weight:700}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.seats{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.seat{min-height:76px;background:var(--card);border:2px solid var(--line);border-bottom-width:5px;border-radius:18px;font-size:1.5rem;font-weight:700;display:grid;place-items:center;padding:6px}
+.seat small{font-size:.8rem;font-weight:400}
+ul.log{list-style:none;padding:0}
+ul.log li{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--soft)}
+textarea,input{font:inherit;width:100%;border:2px solid var(--soft);border-radius:14px;padding:10px 14px;background:#fff}
+textarea{min-height:260px}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+textarea.s{min-height:84px}
+.card+.card,.card+h3{margin-top:14px}
+.proj{position:fixed;inset:0;background:#1d3557;color:#fff;padding:5vh 6vw;overflow:auto;z-index:9;font-size:2.4rem;line-height:1.6;white-space:pre-wrap}
+.proj h3{color:#ffd9cf;margin:0 0 .3em}
+.seat.done{background:var(--soft);color:var(--mut);border-color:var(--mut)}
+.seat b{color:var(--acc);font-size:1rem}
+
+</style>
 </head>
 <body>
 <div id="login" class="center" hidden>
@@ -24,6 +75,260 @@
     <div id="view"></div>
   </main>
 </div>
-<script type="module" src="js/app.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, doc, getDoc, setDoc, updateDoc,
+  collection, addDoc, query, where, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyAHnreDZMsL8Drlk8KLdRc-bkWB38LHuTc",
+  authDomain: "instructional-dashboard.firebaseapp.com",
+  projectId: "instructional-dashboard",
+  storageBucket: "instructional-dashboard.firebasestorage.app",
+  messagingSenderId: "695443531271",
+  appId: "1:695443531271:web:98865af19a310f5667eca2"
+});
+const auth = getAuth(app);
+const db = initializeFirestore(app, { localCache: persistentLocalCache() });
+
+const onUser = cb => onAuthStateChanged(auth, cb);
+const login = () => signInWithPopup(auth, new GoogleAuthProvider());
+const logout = () => signOut(auth);
+
+// 設定與名單（每個學期可再加上 term 欄位區分）
+async function getConfig(name, fallback) {
+  const s = await getDoc(doc(db, "config", name));
+  return s.exists() ? s.data() : fallback;
+}
+const saveConfig = (name, data) => setDoc(doc(db, "config", name), data);
+
+// 加扣分帳本：只新增、不改分數；復原 = 標記 voided
+const addLedger = e => addDoc(collection(db, "ledger"), { ...e, ts: Date.now(), voided: false });
+const voidLedger = id => updateDoc(doc(db, "ledger", id), { voided: true });
+async function listLedger(date) {
+  const snap = await getDocs(query(collection(db, "ledger"), where("date", "==", date)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .filter(e => !e.voided).sort((a, b) => b.ts - a.ts);
+}
+
+// 各模組資料：沿用舊系統備份的格式，整份存成 JSON 字串（避開 Firestore 巢狀陣列限制）
+async function getKV(k, fb) {
+  const s = await getDoc(doc(db, "kv", k));
+  return s.exists() ? JSON.parse(s.data().json) : fb;
+}
+const setKV = (k, v) => setDoc(doc(db, "kv", k), { json: JSON.stringify(v), ts: Date.now() });
+async function allKV() {
+  const o = {};
+  (await getDocs(collection(db, "kv"))).docs.forEach(d => o[d.id] = JSON.parse(d.data().json));
+  return o;
+}
+
+
+const $ = s => document.querySelector(s);
+const ymd = d => d.toLocaleDateString("sv");
+const today = () => ymd(new Date());
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ctx = { roster: [], cfg: { className: "六年五班" } };
+const seatList = n => ctx.roster.length ? ctx.roster : Array.from({ length: n || 28 }, (_, i) => ({ seat: i + 1, name: "" }));
+const save = (name, obj) => { const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" }));
+  a.download = name; a.click(); };
+
+// ---- 週次計算（沿用舊系統：以開學週的週一為第 1 週）----
+const monday = s => { const d = new Date(s + "T00:00:00"); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
+const weekNo = (b, date) => Math.floor((monday(date) - monday(b.settings?.semesterStart || "2026-08-31")) / 6048e5) + 1;
+const dow = date => { const g = new Date(date + "T00:00:00").getDay(); return g >= 1 && g <= 5 ? g : 0; };
+const stub = (id, icon, title, note) => ({ id, icon, title, summary: async () => null,
+  render: el => el.innerHTML = `<h2>${title}</h2><p class="muted">${note}</p>` });
+const BOARD0 = { settings: { semesterStart: "2026-08-31" }, events: [], morningTemplates: {}, weeksData: {} };
+
+const home = {
+  id: "home", icon: "🏠", title: "首頁", summary: async () => null,
+  async render(el) {
+    const items = (await Promise.all(MODS.map(m => m.summary()))).filter(Boolean);
+    if (!ctx.roster.length) items.unshift({ text: "尚未設定學生名單", badge: "去設定", go: "settings" });
+    el.innerHTML = `<section class="hero"><small>${today()}</small><h1>${esc(ctx.cfg.className)}</h1>
+      <p>每天最常用的入口與提醒。</p><div class="quick"><button class="btn hot" data-go="board">開黑板</button>
+      <button class="btn" data-go="corrections">查訂正</button><button class="btn" data-go="points">加分</button></div></section>
+      <section class="card"><h2>待處理提醒</h2>${items.map(i => `<div class="row"><span>${i.text}</span>
+      <button class="badge" ${i.go ? `data-go="${i.go}"` : ""}>${i.badge}</button></div>`).join("") || `<p class="muted">目前沒有待處理的事項。</p>`}</section>`;
+  }
+};
+
+const board = {
+  id: "board", icon: "📋", title: "班級黑板", date: today(),
+  async summary() {
+    const b = await getKV("board", BOARD0), d = dow(today());
+    return d && !b.weeksData?.[weekNo(b, today())]?.[d]?.homework ? { text: "今日聯絡簿尚未填寫", badge: "待填寫", go: "board" } : null;
+  },
+  async render(el) {
+    const b = await getKV("board", BOARD0);
+    const F = [["chinese", "國語進度"], ["math", "數學進度"], ["flex", "彈性課程"]];
+    const draw = () => {
+      const dw = dow(this.date), wk = weekNo(b, this.date), day = dw ? (b.weeksData?.[wk]?.[dw] || {}) : {};
+      const evs = (b.events || []).filter(e => e.date === this.date);
+      el.innerHTML = `<h2>班級黑板</h2><div class="bar"><button class="chip" data-step="-1">◀ 前一天</button>
+        <b>${this.date}（第 ${wk} 週）</b><button class="chip" data-step="1">後一天 ▶</button><button class="chip" data-step="0">今天</button>
+        <button class="chip on" id="bProj">投影</button></div>
+        ${dw ? `<div class="card"><h3>早自修</h3><textarea class="s" id="bM">${esc(b.morningTemplates?.[dw])}</textarea>
+          <h3>今日作業</h3><textarea class="s" id="bH">${esc(day.homework)}</textarea>
+          ${F.map(([k, n]) => `<h3>${n}</h3><input id="f_${k}" value="${esc(day[k])}">`).join("")}
+          <p><button class="btn on" id="bSave">儲存</button> <span class="muted" id="bMsg"></span></p></div>` : `<p class="muted">週末沒有聯絡簿。</p>`}
+        <h3>當日行事曆</h3>${evs.map(e => `<div class="row"><span>${esc(e.title)}</span><button class="chip" data-del="${e.id}">刪除</button></div>`).join("") || `<p class="muted">沒有事項。</p>`}
+        <div class="bar"><input id="eT" placeholder="新增事項"><button class="btn" id="eAdd">新增</button></div>`;
+    };
+    el.onclick = async e => {
+      const t = e.target.closest("button"); if (!t) return;
+      if (t.dataset.step != null) { const s = +t.dataset.step, d = new Date(this.date + "T00:00:00");
+        this.date = s ? ymd(new Date(d.setDate(d.getDate() + s))) : today(); return draw(); }
+      if (t.dataset.del && confirm("確定刪除這個事項？")) { b.events = b.events.filter(x => x.id !== t.dataset.del); await setKV("board", b); return draw(); }
+      if (t.id === "eAdd" && $("#eT").value.trim()) { (b.events ||= []).push({ id: String(Date.now()), date: this.date, title: $("#eT").value.trim() }); await setKV("board", b); return draw(); }
+      if (t.id === "bSave") { const dw = dow(this.date), wk = weekNo(b, this.date);
+        (b.morningTemplates ||= {})[dw] = $("#bM").value; ((b.weeksData ||= {})[wk] ||= {})[dw] = { ...(b.weeksData[wk][dw] || {}),
+          homework: $("#bH").value, ...Object.fromEntries(F.map(([k]) => [k, $(`#f_${k}`).value])) };
+        await setKV("board", b); $("#bMsg").textContent = "已儲存"; }
+      if (t.id === "bProj") { const dw = dow(this.date), day = b.weeksData?.[weekNo(b, this.date)]?.[dw] || {};
+        const p = document.createElement("div"); p.className = "proj";
+        p.innerHTML = `<h3>早自修</h3>${esc(b.morningTemplates?.[dw] || "（未填寫）")}\n\n<h3>今日作業</h3>${esc(day.homework || "（未填寫）")}`;
+        p.onclick = () => p.remove(); document.body.append(p); }
+    };
+    draw();
+  }
+};
+
+const corrections = {
+  id: "corrections", icon: "✏️", title: "作業訂正", sel: null,
+  async summary() {
+    const c = await getKV("corr", { items: [] }), n = seatList().length;
+    const open = c.items.filter(i => i.done.length < n).length;
+    return open ? { text: "尚有訂正事項未全部完成", badge: `${open} 項`, go: "corrections" } : null;
+  },
+  async render(el) {
+    const c = await getKV("corr", { items: [] }), n = seatList();
+    const draw = () => {
+      const cur = c.items.find(i => i.id === this.sel) || c.items[0]; this.sel = cur?.id;
+      el.innerHTML = `<h2>作業訂正</h2><div class="bar">${c.items.map(i => `<button class="chip ${i.id === this.sel ? "on" : ""}" data-sel="${i.id}">${esc(i.title)}（${i.done.length}/${n.length}）</button>`).join("")}</div>
+        ${cur ? `<div class="seats">${n.map(r => `<button class="seat ${cur.done.includes(r.seat) ? "done" : ""}" data-seat="${r.seat}">${r.seat}<small>${esc(r.name)}</small></button>`).join("")}</div>
+          <p><button class="chip" data-rm="${cur.id}">刪除此項目</button></p>` : `<p class="muted">先新增一個訂正或例行事項。</p>`}
+        <div class="bar"><input id="cT" placeholder="例如：數習 P12 訂正"><button class="btn" id="cAdd">新增</button></div>`;
+    };
+    el.onclick = async e => {
+      const t = e.target.closest("button"); if (!t) return; const d = t.dataset, cur = c.items.find(i => i.id === this.sel);
+      if (d.sel) this.sel = d.sel;
+      else if (d.seat) { const s = +d.seat; cur.done = cur.done.includes(s) ? cur.done.filter(x => x !== s) : [...cur.done, s]; await setKV("corr", c); }
+      else if (d.rm) { if (!confirm("確定刪除這個項目？")) return; c.items = c.items.filter(i => i.id !== d.rm); this.sel = null; await setKV("corr", c); }
+      else if (t.id === "cAdd" && $("#cT").value.trim()) { const id = String(Date.now()); c.items.push({ id, title: $("#cT").value.trim(), done: [] }); this.sel = id; await setKV("corr", c); }
+      else return;
+      draw();
+    };
+    draw();
+  }
+};
+
+const points = {
+  id: "points", icon: "⭐", title: "加分系統", subj: "chinese", d: 1, summary: async () => null,
+  async render(el) {
+    const p = await getKV("points", { studentCount: 28, scores: {} });
+    const S = [["chinese", "國語"], ["math", "數學"], ["order", "秩序"]];
+    const draw = () => {
+      el.innerHTML = `<h2>加分系統</h2><div class="bar">${S.map(([k, n]) => `<button class="chip ${k === this.subj ? "on" : ""}" data-s="${k}">${n}</button>`).join("")}
+        <button class="chip ${this.d > 0 ? "on" : ""}" data-d="1">＋1</button><button class="chip ${this.d < 0 ? "on" : ""}" data-d="-1">－1</button></div>
+        <div class="seats">${seatList(p.studentCount).map(r => `<button class="seat" data-seat="${r.seat}">${r.seat}<small>${esc(r.name)}</small>
+        <b>${p.scores[r.seat]?.[this.subj] || 0}</b></button>`).join("")}</div>`;
+    };
+    el.onclick = async e => {
+      const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
+      if (d.s) this.subj = d.s; else if (d.d) this.d = +d.d;
+      else if (d.seat) { const o = (p.scores[d.seat] ||= {}); o[this.subj] = (o[this.subj] || 0) + this.d; await setKV("points", p); }
+      else return;
+      draw();
+    };
+    draw();
+  }
+};
+
+// ---- 資料匯入：三份舊備份各自上傳，另有新系統的完整備份 ----
+const IMPORTS = [
+  { key: "board", label: "行事曆／聯絡簿備份（教學儀錶板）", ok: d => d.weeksData || d.events,
+    pick: d => ({ settings: d.settings, events: d.events, morningTemplates: d.morningTemplates, weeksData: d.weeksData, tracker: d.tracker }) },
+  { key: "attendance", label: "出缺勤備份", ok: d => d.students && d.leaves, pick: d => d },
+  { key: "points", label: "加分備份", ok: d => d.scores, pick: d => ({ studentCount: d.studentCount, scores: d.scores }) }
+];
+const data = {
+  id: "data", icon: "💾", title: "備份與匯入", summary: async () => null,
+  render(el) {
+    el.innerHTML = `<h2>備份與匯入</h2>${IMPORTS.map(m => `<div class="card"><h3>${m.label}</h3>
+      <input type="file" accept=".json" data-imp="${m.key}"></div>`).join("")}
+      <div class="card"><h3>新系統完整備份</h3><p><button class="btn on" id="dOut">下載完整備份</button></p>
+      <p class="muted">還原整份備份：</p><input type="file" accept=".json" data-imp="_all"></div><p id="dMsg" class="muted"></p>`;
+    el.onchange = async e => {
+      const f = e.target.files[0], k = e.target.dataset.imp; if (!f || !k) return;
+      try {
+        const d = JSON.parse(await f.text()), msg = $("#dMsg");
+        if (k === "_all") {
+          if (d._format !== "dashboard-v1") throw new Error("這不是新系統的完整備份檔");
+          if (!confirm("將覆蓋目前所有資料，確定還原？")) return;
+          for (const [n, v] of Object.entries(d.kv)) await setKV(n, v);
+          ctx.roster = d.roster || []; ctx.cfg = d.cfg || ctx.cfg;
+        } else {
+          const m = IMPORTS.find(x => x.key === k);
+          if (!m.ok(d)) throw new Error("檔案格式不符，請確認選的是「" + m.label + "」");
+          if (!confirm(`將覆蓋目前的「${m.label}」資料，確定匯入？`)) return;
+          await setKV(k, m.pick(d));
+          if (k === "attendance" && !ctx.roster.length) ctx.roster = d.students.filter(s => s.status !== "轉出").map(s => ({ seat: +s.seat, name: s.name }));
+        }
+        await saveConfig("roster", { students: ctx.roster }); await saveConfig("main", ctx.cfg); fill();
+        msg.textContent = "匯入完成。"; e.target.value = "";
+      } catch (err) { $("#dMsg").textContent = "匯入失敗：" + err.message; }
+    };
+    $("#dOut").onclick = async () => save(`dashboard_backup_${today()}.json`, { _format: "dashboard-v1", kv: await allKV(), roster: ctx.roster, cfg: ctx.cfg });
+  }
+};
+
+const settings = {
+  id: "settings", icon: "⚙️", title: "設定", summary: async () => null,
+  render(el) {
+    el.innerHTML = `<h2>設定</h2><div class="card"><label>班級名稱<input id="sCls" value="${esc(ctx.cfg.className)}"></label>
+      <p>學生名單（每行一位：座號 姓名）</p><textarea id="sRoster">${ctx.roster.map(r => `${r.seat} ${esc(r.name)}`).join("\n")}</textarea>
+      <p><button id="sSave" class="btn on">儲存</button> <span id="sMsg" class="muted"></span></p><p><button id="sOut" class="btn">登出</button></p></div>`;
+    $("#sSave").onclick = async () => {
+      ctx.roster = $("#sRoster").value.split("\n").map(l => l.trim().match(/^(\d+)\s+(.+)$/)).filter(Boolean).map(m => ({ seat: +m[1], name: m[2] })).sort((a, b) => a.seat - b.seat);
+      ctx.cfg.className = $("#sCls").value.trim() || ctx.cfg.className;
+      await saveConfig("roster", { students: ctx.roster }); await saveConfig("main", ctx.cfg); fill(); $("#sMsg").textContent = "已儲存";
+    };
+    $("#sOut").onclick = () => logout();
+  }
+};
+
+const MODS = [home, board, stub("attendance", "🗓️", "出缺勤", "出缺勤畫面下一階段接上；你的出缺勤備份現在就可以先匯入保存。"), corrections, points, data, settings];
+
+function fill() { $("#clsName").textContent = ctx.cfg.className; $("#clsInfo").textContent = `${ctx.roster.length} 位學生`; }
+function go(id) {
+  $("#nav").innerHTML = MODS.map(m => `<button data-go="${m.id}" class="${m.id === id ? "on" : ""}"><span>${m.icon}</span><span class="t">${m.title}</span></button>`).join("");
+  const el = $("#view"); el.onclick = el.onchange = null; el.innerHTML = "";
+  Promise.resolve(MODS.find(m => m.id === id).render(el)).catch(err => el.innerHTML = `<div class="card"><h2>這一頁載入失敗</h2><p class="muted">${esc(err.message)}</p></div>`);
+}
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
+$("#fold").onclick = () => $("#app").classList.toggle("fold");
+$("#signin").onclick = () => login().catch(e => $("#loginMsg").textContent = "登入失敗：" + e.message);
+const tick = () => $("#clock").textContent = new Date().toLocaleString("zh-TW", { month: "numeric", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+setInterval(tick, 20000); tick();
+
+onUser(async user => {
+  $("#login").hidden = !!user; $("#app").hidden = !user; if (!user) return;
+  try {
+    ctx.cfg = { ...ctx.cfg, ...(await getConfig("main", {})) };
+    ctx.roster = (await getConfig("roster", { students: [] })).students;
+    fill(); go("home");
+  } catch (e) {
+    $("#app").hidden = true; $("#login").hidden = false;
+    $("#loginMsg").textContent = "此帳號沒有讀取權限，請確認 Firestore 規則中的 Email。"; logout();
+  }
+});
+
+</script>
 </body>
 </html>
