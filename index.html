@@ -40,7 +40,7 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 .seat b{color:var(--acc);font-size:1rem}
 .seat.sel{background:var(--acc);border-color:var(--acc);color:#fff}
 .seat.sel b,.seat.sel small{color:#fff}
-.seat.st0{background:#E4ECDD;color:#3F5230}.seat.st1{background:#EADFC9;color:#5C4B2E}.seat.st2{background:#F1D6DD;color:#7A3A4A}.seat.st3{background:#D9E3E7;color:#2F4550}.seat.st4{background:#D3E6DE;color:#2F5E4E}
+.seat.st0{background:#FFFDF7;color:#2F4550}.seat.st1{background:#EADFC9;color:#5C4B2E}.seat.st2{background:#F1D6DD;color:#7A3A4A}.seat.st3{background:#D9E3E7;color:#2F4550}.seat.st4{background:#D3E6DE;color:#2F5E4E}
 .seat[class*=" st"] b,.seat[class*=" st"] small{color:inherit}
 .brd{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 14px;margin:8px 0}
 .k-chinese{background:#E4ECDD;color:#3F5230;border-color:transparent}.k-math{background:#F1D6DD;color:#7A3A4A;border-color:transparent}.k-order{background:#D9E3E7;color:#2F4550;border-color:transparent}
@@ -63,17 +63,17 @@ table.wk textarea{border:0;min-height:96px;padding:6px}
 .projw.ov{position:fixed;inset:0;z-index:9;height:auto;border-radius:0}
 .pclk{font-size:9vw;line-height:1.1}
 .pdate{font-size:2.6vw;margin:.4vh 0 1.6vh}
-.pbox{display:grid;grid-template-columns:1fr 1fr;gap:3vw;width:100%;flex:1;min-height:0}
-.pbox section{border:6px solid #000;border-radius:40px;padding:1.5vh 2.5vw;overflow:auto;background:#fff}
+.pbox{display:grid;grid-template-columns:4fr 6fr;gap:3vw;width:100%;flex:1;min-height:0}
+.pbox section{border:3px solid #000;border-radius:22px;padding:1.5vh 2.5vw;overflow:auto;background:#fff}
 .pbox h2{margin:0 0 1vh;font-size:3.4vw;font-weight:700}
 .pbox div{font-size:3vw;line-height:1.7;white-space:pre-wrap}
 .pc{position:absolute;top:10px;right:12px;min-height:36px;padding:0 12px;border:1px solid #ccc;background:#fff;border-radius:10px;opacity:.55;color:#333;font-family:system-ui,sans-serif}
-.ft{position:absolute;width:260px;background:#fff;border:2px solid #476570;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.22);z-index:10;font:14px system-ui,sans-serif}
+.ft{position:absolute;width:430px;background:#fff;border:2px solid #476570;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.22);z-index:10;font:14px system-ui,sans-serif}
 .fh{display:flex;gap:4px;padding:6px;background:#476570;border-radius:11px 11px 0 0;cursor:move}
-.fh input{flex:1;min-width:0;padding:2px 8px;border-radius:8px;font-size:14px}
-.fh button{min-height:28px;padding:0 8px;border-radius:8px;border:0;background:#fff}
-.fg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:6px}
-.fg button{min-height:28px;border:1px solid #ccc;background:#fff;border-radius:6px;font-size:13px}
+.fh input{flex:1;min-width:0;padding:4px 10px;border-radius:8px;font-size:20px}
+.fh button{min-height:40px;padding:0 12px;font-size:18px;border-radius:8px;border:0;background:#fff}
+.fg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:8px}
+.fg button{min-height:48px;border:1px solid #bbb;background:#fff;border-radius:8px;font-size:20px;font-weight:700}
 .fg button.d{color:transparent;background:#eee;border-color:#eee}
 .ctabs{display:grid;gap:14px}.ctabs.n1{grid-template-columns:1fr}.ctabs.n2,.ctabs.n3,.ctabs.n4{grid-template-columns:1fr 1fr}
 .ct{background:#fff;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
@@ -84,6 +84,11 @@ table.wk textarea{border:0;min-height:96px;padding:6px}
 .cg button{min-height:54px;border:0;background:var(--c);color:var(--t);border-radius:8px;font-size:1.4rem;font-weight:700}
 .n1 .cg button{min-height:96px;font-size:2.6rem}
 .cg button.gone{color:transparent;background:#fff;border:1.5px dashed var(--line)}
+
+.chip[class*="k-"]{min-height:60px;font-size:1.5rem;padding:0 28px}
+#view[data-sj=chinese] .seat.sel,#view[data-sj=chinese] .btn.on{background:#3E8E5A;border-color:#3E8E5A;color:#fff}
+#view[data-sj=math] .seat.sel,#view[data-sj=math] .btn.on{background:#C94C4C;border-color:#C94C4C;color:#fff}
+#view[data-sj=order] .seat.sel,#view[data-sj=order] .btn.on{background:#3B6FB6;border-color:#3B6FB6;color:#fff}
 
 </style>
 </head>
@@ -335,6 +340,7 @@ const points = {
     const names = Object.fromEntries(list.map(r => [r.seat, r.name]));
     const grid = (att.seatGrid || []).map(Number).filter(n => !isNaN(n)).map(s => nums.includes(s) ? s : 0);
     const draw = () => { const ch = this.subj === "chinese" && grid.length, cells = ch ? grid : nums;
+      el.dataset.sj = this.subj;
       el.innerHTML = `<h2>加分系統</h2><div class="bar">${S.map(([k, n]) => `<button class="chip k-${k} ${k === this.subj ? "on" : ""}" data-sj="${k}">${n}</button>`).join("")}</div>
         <div class="bar"><button class="chip" data-all="1">全選全班</button><button class="chip" data-none="1">清除選取</button><b>已選 ${this.sel.size} 人</b>
         ${PRE[this.subj].map(v => `<button class="btn on" data-ap="${v}" ${this.sel.size ? "" : "disabled"}>${v > 0 ? "＋" : "－"}${Math.abs(v)}</button>`).join("")}</div>
@@ -414,7 +420,7 @@ const MODS = [home, board, attendance, corrections, points, data, settings];
 function fill() { $("#clsName").textContent = ctx.cfg.className; $("#clsInfo").textContent = `${ctx.roster.length} 位學生`; }
 function go(id) {
   $("#nav").innerHTML = MODS.map(m => `<button data-go="${m.id}" class="${m.id === id ? "on" : ""}"><span>${m.icon}</span><span class="t">${m.title}</span></button>`).join("");
-  clearInterval(window.__iv); const el = $("#view"); el.onclick = el.onchange = null; el.innerHTML = "";
+  clearInterval(window.__iv); const el = $("#view"); el.onclick = el.onchange = null; el.removeAttribute("data-sj"); el.innerHTML = "";
   Promise.resolve(MODS.find(m => m.id === id).render(el)).catch(err => el.innerHTML = `<div class="card"><h2>這一頁載入失敗</h2><p class="muted">${esc(err.message)}</p></div>`);
 }
 document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
