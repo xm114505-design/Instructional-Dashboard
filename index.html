@@ -54,6 +54,35 @@ textarea.s{min-height:84px}
 .proj h3{color:#ffd9cf;margin:0 0 .3em}
 .seat.done{background:var(--soft);color:var(--mut);border-color:var(--mut)}
 .seat b{color:var(--acc);font-size:1rem}
+table.wk{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;min-width:760px}
+table.wk th,table.wk td{border:2px solid var(--soft);padding:4px;vertical-align:top}
+table.wk th{background:#f4f9f8;width:12%;font-size:1rem}
+table.wk tr.today th{background:#fde8e2}
+table.wk textarea{border:0;min-height:96px;padding:6px;border-radius:8px}
+.wrap{overflow:auto}
+.projw{position:fixed;inset:0;background:#fff;color:#000;z-index:9;display:flex;flex-direction:column;align-items:center;padding:2vh 4vw;font-family:"Noto Serif TC","Songti TC",PMingLiU,serif}
+.pclk{font-size:9vw;line-height:1.1}.pdate{font-size:2.6vw;margin:.5vh 0 2vh}
+.pbox{display:grid;grid-template-columns:1fr 1fr;gap:3vw;width:100%;flex:1;min-height:0}
+.pbox section{border:4px dashed #2f5597;border-radius:48px;padding:2vh 2.5vw;overflow:auto}
+.pbox h2{margin:0 0 1vh;font-size:3.4vw;font-weight:500}.pbox div{font-size:2.8vw;line-height:1.7;white-space:pre-wrap}
+.pc{position:absolute;top:10px;right:12px;min-height:36px;padding:0 12px;border:1px solid #ccc;background:#fff;border-radius:10px;opacity:.55;color:#333;font-family:system-ui,sans-serif}
+.ft{position:absolute;width:260px;background:#fff;border:2px solid #2f5597;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:10;font:14px system-ui,sans-serif}
+.fh{display:flex;gap:4px;padding:6px;background:#2f5597;border-radius:11px 11px 0 0;cursor:move}
+.fh input{flex:1;min-width:0;padding:2px 8px;border-radius:8px;font-size:14px}
+.fh button{min-height:28px;padding:0 8px;border-radius:8px;border:0;background:#fff}
+.fg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:6px}
+.fg button{min-height:28px;border:1px solid #ccc;background:#fff;border-radius:6px;font-size:13px}
+.fg button.d{color:transparent;background:#eee;border-color:#eee}
+.ctabs{display:grid;gap:14px}.ctabs.n1{grid-template-columns:1fr}.ctabs.n2,.ctabs.n3,.ctabs.n4{grid-template-columns:1fr 1fr}
+.ct{background:#fff;border-radius:14px;overflow:hidden;border:2px solid var(--soft)}
+.cth{display:flex;gap:6px;padding:8px}.cth input{flex:1;min-width:0;background:transparent;border:0;color:#fff;font-weight:700;font-size:1.2rem;padding:2px 6px}
+.cth button{min-height:34px;padding:0 10px;border:0;border-radius:8px;background:rgba(255,255,255,.85);font-size:.8rem}
+.cg{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;padding:6px}
+.cg button{min-height:52px;border:0;background:#e9eef7;border-radius:6px;font-size:1.3rem}
+.n1 .cg button{min-height:92px;font-size:2.4rem}
+.cg button.gone{color:transparent;background:#f6f6f6}
+.seat.sel{background:var(--acc);color:#fff}.seat.sel b,.seat.sel small{color:#fff}
+.btn:disabled{opacity:.4}
 
 </style>
 </head>
@@ -158,94 +187,125 @@ const home = {
   }
 };
 
+const seatNums = () => seatList().map(r => r.seat);
+const DAYS = ["一", "二", "三", "四", "五"];
+
+// ---- 投影頁：乾淨白底 + 可拖曳的小訂正表 ----
+function openProj(b) {
+  const d = dow(today()), day = d ? (b.weeksData?.[weekNo(b, today())]?.[d] || {}) : {};
+  const p = document.createElement("div"); p.className = "projw";
+  p.innerHTML = `<button class="pc" id="pT" style="left:12px;right:auto">＋ 訂正表</button><button class="pc" id="pX">✕</button>
+    <div class="pclk"></div><div class="pdate"></div><div class="pbox">
+    <section><h2>早自修任務：</h2><div>${esc(d ? b.morningTemplates?.[d] : "")}</div></section>
+    <section><h2>聯絡簿：</h2><div>${esc(day.homework)}</div></section></div>`;
+  const clk = () => { const n = new Date();
+    p.querySelector(".pclk").textContent = [n.getHours(), n.getMinutes(), n.getSeconds()].map(x => String(x).padStart(2, "0")).join("：");
+    p.querySelector(".pdate").textContent = n.toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric", weekday: "long" }); };
+  clk(); const iv = setInterval(clk, 1000);
+  p.onclick = e => { if (e.target.id === "pX") { clearInterval(iv); p.remove(); } if (e.target.id === "pT") floatTracker(p, b); };
+  document.body.append(p);
+}
+function floatTracker(p, b) {
+  if (p.querySelector(".ft")) return;
+  const tr = (b.tracker ||= { title: "消毒", status: {} }); tr.status ||= {};
+  const f = document.createElement("div"); f.className = "ft"; f.style.left = "58%"; f.style.top = "38%";
+  const draw = () => f.innerHTML = `<div class="fh"><input id="fT" value="${esc(tr.title)}"><button data-r="1" title="全部重設">↺</button><button data-x="1" title="關閉">✕</button></div>
+    <div class="fg">${seatNums().map(s => `<button class="${tr.status[s] ? "d" : ""}" data-s="${s}">${s}</button>`).join("")}</div>`;
+  draw(); p.append(f);
+  f.onpointerdown = e => { if (!e.target.closest(".fh") || e.target.closest("input,button")) return;
+    const ox = e.clientX - f.offsetLeft, oy = e.clientY - f.offsetTop; f.setPointerCapture(e.pointerId);
+    f.onpointermove = m => { f.style.left = m.clientX - ox + "px"; f.style.top = m.clientY - oy + "px"; };
+    f.onpointerup = () => f.onpointermove = null; };
+  f.onclick = async e => { const t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.x) return f.remove();
+    if (t.dataset.r) tr.status = {}; else if (t.dataset.s) tr.status[t.dataset.s] = !tr.status[t.dataset.s]; else return;
+    await setKV("board", b); draw(); };
+  f.onchange = async e => { if (e.target.id === "fT") { tr.title = e.target.value; await setKV("board", b); } };
+}
+
+// ---- 班級黑板：一頁一週，「作業」欄即當天聯絡簿 ----
 const board = {
-  id: "board", icon: "📋", title: "班級黑板", date: today(),
+  id: "board", icon: "📋", title: "班級黑板", week: null,
   async summary() {
     const b = await getKV("board", BOARD0), d = dow(today());
     return d && !b.weeksData?.[weekNo(b, today())]?.[d]?.homework ? { text: "今日聯絡簿尚未填寫", badge: "待填寫", go: "board" } : null;
   },
   async render(el) {
-    const b = await getKV("board", BOARD0);
-    const F = [["chinese", "國語進度"], ["math", "數學進度"], ["flex", "彈性課程"]];
+    const b = await getKV("board", BOARD0), t0 = today(), F = [["chinese", "國語"], ["math", "數學"], ["flex", "彈性"], ["homework", "作業"]];
+    this.week = weekNo(b, t0);
     const draw = () => {
-      const dw = dow(this.date), wk = weekNo(b, this.date), day = dw ? (b.weeksData?.[wk]?.[dw] || {}) : {};
-      const evs = (b.events || []).filter(e => e.date === this.date);
-      el.innerHTML = `<h2>班級黑板</h2><div class="bar"><button class="chip" data-step="-1">◀ 前一天</button>
-        <b>${this.date}（第 ${wk} 週）</b><button class="chip" data-step="1">後一天 ▶</button><button class="chip" data-step="0">今天</button>
-        <button class="chip on" id="bProj">投影</button></div>
-        ${dw ? `<div class="card"><h3>早自修</h3><textarea class="s" id="bM">${esc(b.morningTemplates?.[dw])}</textarea>
-          <h3>今日作業</h3><textarea class="s" id="bH">${esc(day.homework)}</textarea>
-          ${F.map(([k, n]) => `<h3>${n}</h3><input id="f_${k}" value="${esc(day[k])}">`).join("")}
-          <p><button class="btn on" id="bSave">儲存</button> <span class="muted" id="bMsg"></span></p></div>` : `<p class="muted">週末沒有聯絡簿。</p>`}
-        <h3>當日行事曆</h3>${evs.map(e => `<div class="row"><span>${esc(e.title)}</span><button class="chip" data-del="${e.id}">刪除</button></div>`).join("") || `<p class="muted">沒有事項。</p>`}
-        <div class="bar"><input id="eT" placeholder="新增事項"><button class="btn" id="eAdd">新增</button></div>`;
+      const wk = this.week, w0 = monday(b.settings?.semesterStart || "2026-08-31");
+      const rows = [1, 2, 3, 4, 5].map(d => { const dt = new Date(w0); dt.setDate(dt.getDate() + (wk - 1) * 7 + d - 1);
+        const day = b.weeksData?.[wk]?.[d] || {};
+        return `<tr class="${ymd(dt) === t0 ? "today" : ""}"><th>${dt.getMonth() + 1}/${dt.getDate()}（${DAYS[d - 1]}）</th>${F.map(([k]) => `<td><textarea data-d="${d}" data-k="${k}">${esc(day[k])}</textarea></td>`).join("")}</tr>`; }).join("");
+      el.innerHTML = `<h2>班級黑板</h2><div class="bar"><button class="chip" data-w="-1">◀ 上一週</button><b>第 ${wk} 週</b>
+        <button class="chip" data-w="1">下一週 ▶</button><button class="chip" data-w="0">本週</button><button class="btn hot" id="bProj">開啟投影</button></div>
+        <div class="wrap"><table class="wk"><tr><th></th>${F.map(([, n]) => `<th>${n}</th>`).join("")}</tr>${rows}</table></div>
+        <p class="muted">「作業」欄會自動成為當天的聯絡簿，輸入後會自動儲存。 <span id="bMsg"></span></p>
+        <h3>早自修任務（每週固定，投影時顯示）</h3><div class="bar">${DAYS.map((n, i) => `<label>週${n}<textarea class="s" data-m="${i + 1}">${esc(b.morningTemplates?.[i + 1])}</textarea></label>`).join("")}</div>`;
     };
-    el.onclick = async e => {
-      const t = e.target.closest("button"); if (!t) return;
-      if (t.dataset.step != null) { const s = +t.dataset.step, d = new Date(this.date + "T00:00:00");
-        this.date = s ? ymd(new Date(d.setDate(d.getDate() + s))) : today(); return draw(); }
-      if (t.dataset.del && confirm("確定刪除這個事項？")) { b.events = b.events.filter(x => x.id !== t.dataset.del); await setKV("board", b); return draw(); }
-      if (t.id === "eAdd" && $("#eT").value.trim()) { (b.events ||= []).push({ id: String(Date.now()), date: this.date, title: $("#eT").value.trim() }); await setKV("board", b); return draw(); }
-      if (t.id === "bSave") { const dw = dow(this.date), wk = weekNo(b, this.date);
-        (b.morningTemplates ||= {})[dw] = $("#bM").value; ((b.weeksData ||= {})[wk] ||= {})[dw] = { ...(b.weeksData[wk][dw] || {}),
-          homework: $("#bH").value, ...Object.fromEntries(F.map(([k]) => [k, $(`#f_${k}`).value])) };
-        await setKV("board", b); $("#bMsg").textContent = "已儲存"; }
-      if (t.id === "bProj") { const dw = dow(this.date), day = b.weeksData?.[weekNo(b, this.date)]?.[dw] || {};
-        const p = document.createElement("div"); p.className = "proj";
-        p.innerHTML = `<h3>早自修</h3>${esc(b.morningTemplates?.[dw] || "（未填寫）")}\n\n<h3>今日作業</h3>${esc(day.homework || "（未填寫）")}`;
-        p.onclick = () => p.remove(); document.body.append(p); }
-    };
+    el.onclick = e => { const t = e.target.closest("button"); if (!t) return;
+      if (t.dataset.w != null) { this.week = +t.dataset.w ? this.week + +t.dataset.w : weekNo(b, t0); draw(); }
+      else if (t.id === "bProj") openProj(b); };
+    el.onchange = async e => { const t = e.target;
+      if (t.dataset.k) { const w = ((b.weeksData ||= {})[this.week] ||= {}); w[t.dataset.d] = { ...(w[t.dataset.d] || {}), [t.dataset.k]: t.value }; }
+      else if (t.dataset.m) (b.morningTemplates ||= {})[t.dataset.m] = t.value; else return;
+      await setKV("board", b); $("#bMsg").textContent = "已儲存"; };
     draw();
   }
 };
 
+// ---- 作業訂正：最多四張，可收合；點座號消除，再點恢復 ----
+const COLORS = ["#4472c4", "#f5b400", "#70ad47", "#8e8e8e"];
 const corrections = {
-  id: "corrections", icon: "✏️", title: "作業訂正", sel: null,
+  id: "corrections", icon: "✏️", title: "作業訂正",
   async summary() {
-    const c = await getKV("corr", { items: [] }), n = seatList().length;
-    const open = c.items.filter(i => i.done.length < n).length;
-    return open ? { text: "尚有訂正事項未全部完成", badge: `${open} 項`, go: "corrections" } : null;
+    const c = await getKV("corr2", { tables: [] }), n = seatList().length, open = c.tables.filter(t => t.done.length < n).length;
+    return open ? { text: "訂正表尚有座號未完成", badge: `${open} 張`, go: "corrections" } : null;
   },
   async render(el) {
-    const c = await getKV("corr", { items: [] }), n = seatList();
-    const draw = () => {
-      const cur = c.items.find(i => i.id === this.sel) || c.items[0]; this.sel = cur?.id;
-      el.innerHTML = `<h2>作業訂正</h2><div class="bar">${c.items.map(i => `<button class="chip ${i.id === this.sel ? "on" : ""}" data-sel="${i.id}">${esc(i.title)}（${i.done.length}/${n.length}）</button>`).join("")}</div>
-        ${cur ? `<div class="seats">${n.map(r => `<button class="seat ${cur.done.includes(r.seat) ? "done" : ""}" data-seat="${r.seat}">${r.seat}<small>${esc(r.name)}</small></button>`).join("")}</div>
-          <p><button class="chip" data-rm="${cur.id}">刪除此項目</button></p>` : `<p class="muted">先新增一個訂正或例行事項。</p>`}
-        <div class="bar"><input id="cT" placeholder="例如：數習 P12 訂正"><button class="btn" id="cAdd">新增</button></div>`;
-    };
-    el.onclick = async e => {
-      const t = e.target.closest("button"); if (!t) return; const d = t.dataset, cur = c.items.find(i => i.id === this.sel);
-      if (d.sel) this.sel = d.sel;
-      else if (d.seat) { const s = +d.seat; cur.done = cur.done.includes(s) ? cur.done.filter(x => x !== s) : [...cur.done, s]; await setKV("corr", c); }
-      else if (d.rm) { if (!confirm("確定刪除這個項目？")) return; c.items = c.items.filter(i => i.id !== d.rm); this.sel = null; await setKV("corr", c); }
-      else if (t.id === "cAdd" && $("#cT").value.trim()) { const id = String(Date.now()); c.items.push({ id, title: $("#cT").value.trim(), done: [] }); this.sel = id; await setKV("corr", c); }
+    const c = await getKV("corr2", { tables: [{ id: "1", title: "國習", color: 0, hidden: false, done: [] }] }), nums = seatNums();
+    const get = id => c.tables.find(x => x.id === id);
+    const draw = () => { const vis = c.tables.filter(t => !t.hidden), hid = c.tables.filter(t => t.hidden);
+      el.innerHTML = `<h2>作業訂正</h2><div class="bar">${hid.map(t => `<button class="chip" data-show="${t.id}">展開：${esc(t.title)}</button>`).join("")}
+        ${c.tables.length < 4 ? `<button class="btn on" id="cAdd">＋ 新增訂正表</button>` : ""}</div>
+        <div class="ctabs n${vis.length}">${vis.map(t => `<section class="ct"><div class="cth" style="background:${COLORS[t.color % 4]}">
+        <input data-t="${t.id}" value="${esc(t.title)}"><button data-hide="${t.id}">收合</button><button data-rm="${t.id}">刪除</button></div>
+        <div class="cg">${nums.map(s => `<button class="${t.done.includes(s) ? "gone" : ""}" data-tb="${t.id}" data-s="${s}">${s}</button>`).join("")}</div></section>`).join("")
+        || `<p class="muted">目前沒有展開的訂正表。</p>`}</div>`; };
+    el.onclick = async e => { const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
+      if (d.s) { const tb = get(d.tb), s = +d.s; tb.done = tb.done.includes(s) ? tb.done.filter(x => x !== s) : [...tb.done, s]; }
+      else if (d.hide) get(d.hide).hidden = true; else if (d.show) get(d.show).hidden = false;
+      else if (d.rm) { if (!confirm("確定刪除這張訂正表？")) return; c.tables = c.tables.filter(x => x.id !== d.rm); }
+      else if (t.id === "cAdd") { const used = c.tables.map(x => x.color);
+        c.tables.push({ id: String(Date.now()), title: "新訂正表", color: [0, 1, 2, 3].find(i => !used.includes(i)) ?? 0, hidden: false, done: [] }); }
       else return;
-      draw();
-    };
+      await setKV("corr2", c); draw(); };
+    el.onchange = async e => { if (e.target.dataset.t) { get(e.target.dataset.t).title = e.target.value; await setKV("corr2", c); } };
     draw();
   }
 };
 
+// ---- 加分：先選人（可一鍵全選再取消少數），再按加減分；國語依座位表排列 ----
 const points = {
-  id: "points", icon: "⭐", title: "加分系統", subj: "chinese", d: 1, summary: async () => null,
+  id: "points", icon: "⭐", title: "加分系統", subj: "chinese", sel: new Set(), summary: async () => null,
   async render(el) {
-    const p = await getKV("points", { studentCount: 28, scores: {} });
-    const S = [["chinese", "國語"], ["math", "數學"], ["order", "秩序"]];
-    const draw = () => {
-      el.innerHTML = `<h2>加分系統</h2><div class="bar">${S.map(([k, n]) => `<button class="chip ${k === this.subj ? "on" : ""}" data-s="${k}">${n}</button>`).join("")}
-        <button class="chip ${this.d > 0 ? "on" : ""}" data-d="1">＋1</button><button class="chip ${this.d < 0 ? "on" : ""}" data-d="-1">－1</button></div>
-        <div class="seats">${seatList(p.studentCount).map(r => `<button class="seat" data-seat="${r.seat}">${r.seat}<small>${esc(r.name)}</small>
-        <b>${p.scores[r.seat]?.[this.subj] || 0}</b></button>`).join("")}</div>`;
-    };
-    el.onclick = async e => {
-      const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
-      if (d.s) this.subj = d.s; else if (d.d) this.d = +d.d;
-      else if (d.seat) { const o = (p.scores[d.seat] ||= {}); o[this.subj] = (o[this.subj] || 0) + this.d; await setKV("points", p); }
+    const p = await getKV("points", { studentCount: 28, scores: {} }), att = await getKV("attendance", {});
+    const S = [["chinese", "國語"], ["math", "數學"], ["order", "秩序"]], list = seatList(p.studentCount), nums = list.map(r => r.seat);
+    const names = Object.fromEntries(list.map(r => [r.seat, r.name]));
+    const grid = (att.seatGrid || []).map(Number).filter(n => !isNaN(n)).map(s => nums.includes(s) ? s : 0);
+    const draw = () => { const ch = this.subj === "chinese" && grid.length, cells = ch ? grid : nums;
+      el.innerHTML = `<h2>加分系統</h2><div class="bar">${S.map(([k, n]) => `<button class="chip ${k === this.subj ? "on" : ""}" data-sj="${k}">${n}</button>`).join("")}</div>
+        <div class="bar"><button class="chip" data-all="1">全選全班</button><button class="chip" data-none="1">清除選取</button><span>已選 ${this.sel.size} 人</span>
+        ${[1, 2, -1].map(v => `<button class="btn on" data-ap="${v}" ${this.sel.size ? "" : "disabled"}>${v > 0 ? "＋" : "－"}${Math.abs(v)}</button>`).join("")}</div>
+        <div class="seats" style="grid-template-columns:repeat(${ch ? 6 : 10},1fr)">${cells.map(s => s ? `<button class="seat ${this.sel.has(s) ? "sel" : ""}" data-seat="${s}">${s}<small>${esc(names[s])}</small><b>${p.scores[s]?.[this.subj] || 0}</b></button>` : `<span></span>`).join("")}</div>`; };
+    el.onclick = async e => { const t = e.target.closest("button"); if (!t || t.disabled) return; const d = t.dataset;
+      if (d.sj) this.subj = d.sj;
+      else if (d.all) this.sel = new Set(nums); else if (d.none) this.sel = new Set();
+      else if (d.seat) { const s = +d.seat; this.sel.has(s) ? this.sel.delete(s) : this.sel.add(s); }
+      else if (d.ap) { for (const s of this.sel) { const o = (p.scores[s] ||= {}); o[this.subj] = (o[this.subj] || 0) + +d.ap; } this.sel = new Set(); await setKV("points", p); }
       else return;
-      draw();
-    };
+      draw(); };
     draw();
   }
 };
