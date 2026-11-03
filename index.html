@@ -5,84 +5,85 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>課堂儀表板</title>
 <style>
-:root{--bg:#eaf4f1;--ink:#1d3557;--mut:#5f7390;--card:#fff;--acc:#f26b4f;--line:#1d3557;--soft:#dfeceb}
+:root{--bg:#F4F6F2;--ink:#2F4550;--mut:#68808A;--acc:#4F7A69;--line:#D9E0DA;--soft:#E9EFEA}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font:18px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;cursor:pointer}
 .center{min-height:100%;display:grid;place-items:center;padding:24px}
-.card{background:var(--card);border:2px solid var(--soft);border-radius:24px;padding:20px 24px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px 24px}
+.card+.card,.card+h3{margin-top:14px}
 .muted{color:var(--mut)}
 small{color:var(--mut);font-size:.8rem}
 #app{display:flex;height:100%}
-#side{width:260px;flex:none;padding:16px;overflow:auto;background:#fffdf8;border-right:2px solid var(--soft);transition:width .2s}
-.cls{background:var(--card);border:2px solid var(--soft);border-radius:20px;padding:12px 16px;display:grid;margin-bottom:16px}
-.cls b{font-size:1.4rem}
-nav{display:grid;gap:10px}
-nav button{min-height:56px;text-align:left;padding:0 16px;background:var(--card);border:2px solid var(--line);border-bottom-width:5px;border-radius:18px;font-weight:700;display:flex;gap:10px;align-items:center}
-nav button.on{background:var(--acc);color:#fff}
-nav button:active,.btn:active,.seat:active{transform:translateY(2px)}
-.fold #side{width:84px}
+#side{width:250px;flex:none;padding:14px;overflow:auto;background:var(--soft);border-right:1px solid var(--line);transition:width .2s}
+.cls{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 14px;display:grid;margin-bottom:14px}
+.cls b{font-size:1.3rem}
+nav{display:grid;gap:8px}
+nav button{min-height:54px;text-align:left;padding:0 14px;background:#fff;border:1px solid var(--line);border-radius:14px;font-weight:700;display:flex;gap:10px;align-items:center}
+nav button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.fold #side{width:80px}
 .fold .cls,.fold nav .t{display:none}
-main{flex:1;min-width:0;overflow:auto;padding:16px 24px}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-#clock{font-weight:700;font-size:1.3rem}
-.chip,.btn{min-height:48px;padding:0 18px;background:var(--card);border:2px solid var(--line);border-bottom-width:4px;border-radius:16px;font-weight:700}
-.chip.on,.btn.on{background:var(--ink);color:#fff}
-.hero{background:linear-gradient(120deg,#1d3557,#3a7ca5);color:#fff;border-radius:28px;padding:24px 28px;margin-bottom:16px}
-.hero h1{margin:0;font-size:2.6rem}
-.hero small,.hero p{color:#d7e6f2}
-.quick{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-.quick .btn.hot{background:var(--acc);color:#fff;border-color:#fff}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:800px){.grid{grid-template-columns:1fr}}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;margin:8px 0;border:2px solid var(--soft);border-radius:16px}
-.badge{background:#fde8e2;color:#b4432b;border-radius:999px;padding:2px 14px;font-weight:700}
-.bar{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
-.seats{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
-.seat{min-height:76px;background:var(--card);border:2px solid var(--line);border-bottom-width:5px;border-radius:18px;font-size:1.5rem;font-weight:700;display:grid;place-items:center;padding:6px}
+main{flex:1;min-width:0;overflow:auto;padding:12px 22px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#clock{font-weight:700;font-size:1.2rem}
+.chip,.btn{min-height:46px;padding:0 16px;background:#fff;border:1px solid var(--line);border-bottom-width:3px;border-radius:14px;font-weight:700}
+.chip.on,.btn.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn:disabled{opacity:.4}
+.chip:active,.btn:active,.seat:active,nav button:active{transform:translateY(2px)}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 14px;margin:8px 0;border:1px solid var(--line);border-radius:14px;background:#fff}
+.seats{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.seat{min-height:78px;background:#fff;border:1px solid var(--line);border-bottom-width:3px;border-radius:14px;font-size:1.4rem;font-weight:700;display:grid;place-items:center;padding:4px}
 .seat small{font-size:.8rem;font-weight:400}
-ul.log{list-style:none;padding:0}
-ul.log li{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--soft)}
-textarea,input{font:inherit;width:100%;border:2px solid var(--soft);border-radius:14px;padding:10px 14px;background:#fff}
-textarea{min-height:260px}
-:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
-textarea.s{min-height:84px}
-.card+.card,.card+h3{margin-top:14px}
-.proj{position:fixed;inset:0;background:#1d3557;color:#fff;padding:5vh 6vw;overflow:auto;z-index:9;font-size:2.4rem;line-height:1.6;white-space:pre-wrap}
-.proj h3{color:#ffd9cf;margin:0 0 .3em}
-.seat.done{background:var(--soft);color:var(--mut);border-color:var(--mut)}
 .seat b{color:var(--acc);font-size:1rem}
+.seat.sel{background:var(--acc);border-color:var(--acc);color:#fff}
+.seat.sel b,.seat.sel small{color:#fff}
+.seat.st0{background:#E4ECDD;color:#3F5230}.seat.st1{background:#EADFC9;color:#5C4B2E}.seat.st2{background:#F1D6DD;color:#7A3A4A}.seat.st3{background:#D9E3E7;color:#2F4550}.seat.st4{background:#D3E6DE;color:#2F5E4E}
+.seat[class*=" st"] b,.seat[class*=" st"] small{color:inherit}
+.brd{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 14px;margin:8px 0}
+.k-chinese{background:#E4ECDD;color:#3F5230;border-color:transparent}.k-math{background:#F1D6DD;color:#7A3A4A;border-color:transparent}.k-order{background:#D9E3E7;color:#2F4550;border-color:transparent}
+.chip.k-chinese.on{background:#E4ECDD;color:#3F5230;border:3px solid #7F9A62}
+.chip.k-math.on{background:#F1D6DD;color:#7A3A4A;border:3px solid #C98796}
+.chip.k-order.on{background:#D9E3E7;color:#2F4550;border:3px solid #6F8F9B}
+textarea,input{font:inherit;width:100%;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:#fff}
+textarea{min-height:240px}textarea.s{min-height:84px}
+:focus-visible{outline:3px solid #9FAF83;outline-offset:2px}
 table.wk{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;min-width:760px}
-table.wk th,table.wk td{border:2px solid var(--soft);padding:4px;vertical-align:top}
-table.wk th{background:#f4f9f8;width:12%;font-size:1rem}
-table.wk tr.today th{background:#fde8e2}
-table.wk textarea{border:0;min-height:96px;padding:6px;border-radius:8px}
+table.wk th,table.wk td{border:1px solid var(--line);padding:4px;vertical-align:top}
+table.wk th{background:var(--soft);width:12%;font-size:1rem}
+table.wk tr.today th{background:#F1D6DD}
+table.wk textarea{border:0;min-height:96px;padding:6px}
 .wrap{overflow:auto}
-.projw{position:fixed;inset:0;background:#fff;color:#000;z-index:9;display:flex;flex-direction:column;align-items:center;padding:2vh 4vw;font-family:"Noto Serif TC","Songti TC",PMingLiU,serif}
-.pclk{font-size:9vw;line-height:1.1}.pdate{font-size:2.6vw;margin:.5vh 0 2vh}
+.bclk{text-align:center;line-height:1.1;margin:0 0 10px}
+.bclk b{display:block;font:500 5.5rem Georgia,"Times New Roman",serif}
+.bclk small{font-size:1.4rem;color:var(--ink)}
+.projw{display:flex;flex-direction:column;align-items:center;position:relative;background:#fff;color:#000;height:calc(100vh - 90px);padding:1vh 3vw;border-radius:18px;font-family:"DFKai-SB","BiauKai","標楷體","KaiTi","Kaiti TC",serif}
+.projw.ov{position:fixed;inset:0;z-index:9;height:auto;border-radius:0}
+.pclk{font-size:9vw;line-height:1.1}
+.pdate{font-size:2.6vw;margin:.4vh 0 1.6vh}
 .pbox{display:grid;grid-template-columns:1fr 1fr;gap:3vw;width:100%;flex:1;min-height:0}
-.pbox section{border:4px dashed #2f5597;border-radius:48px;padding:2vh 2.5vw;overflow:auto}
-.pbox h2{margin:0 0 1vh;font-size:3.4vw;font-weight:500}.pbox div{font-size:2.8vw;line-height:1.7;white-space:pre-wrap}
+.pbox section{border:6px solid #000;border-radius:40px;padding:1.5vh 2.5vw;overflow:auto;background:#fff}
+.pbox h2{margin:0 0 1vh;font-size:3.4vw;font-weight:700}
+.pbox div{font-size:3vw;line-height:1.7;white-space:pre-wrap}
 .pc{position:absolute;top:10px;right:12px;min-height:36px;padding:0 12px;border:1px solid #ccc;background:#fff;border-radius:10px;opacity:.55;color:#333;font-family:system-ui,sans-serif}
-.ft{position:absolute;width:260px;background:#fff;border:2px solid #2f5597;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:10;font:14px system-ui,sans-serif}
-.fh{display:flex;gap:4px;padding:6px;background:#2f5597;border-radius:11px 11px 0 0;cursor:move}
+.ft{position:absolute;width:260px;background:#fff;border:2px solid #476570;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.22);z-index:10;font:14px system-ui,sans-serif}
+.fh{display:flex;gap:4px;padding:6px;background:#476570;border-radius:11px 11px 0 0;cursor:move}
 .fh input{flex:1;min-width:0;padding:2px 8px;border-radius:8px;font-size:14px}
 .fh button{min-height:28px;padding:0 8px;border-radius:8px;border:0;background:#fff}
 .fg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:6px}
 .fg button{min-height:28px;border:1px solid #ccc;background:#fff;border-radius:6px;font-size:13px}
 .fg button.d{color:transparent;background:#eee;border-color:#eee}
 .ctabs{display:grid;gap:14px}.ctabs.n1{grid-template-columns:1fr}.ctabs.n2,.ctabs.n3,.ctabs.n4{grid-template-columns:1fr 1fr}
-.ct{background:#fff;border-radius:14px;overflow:hidden;border:2px solid var(--soft)}
-.cth{display:flex;gap:6px;padding:8px}.cth input{flex:1;min-width:0;background:transparent;border:0;color:#fff;font-weight:700;font-size:1.2rem;padding:2px 6px}
-.cth button{min-height:34px;padding:0 10px;border:0;border-radius:8px;background:rgba(255,255,255,.85);font-size:.8rem}
-.cg{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;padding:6px}
-.cg button{min-height:52px;border:0;background:#e9eef7;border-radius:6px;font-size:1.3rem}
-.n1 .cg button{min-height:92px;font-size:2.4rem}
-.cg button.gone{color:transparent;background:#f6f6f6}
-.seat.sel{background:var(--acc);color:#fff}.seat.sel b,.seat.sel small{color:#fff}
-.btn:disabled{opacity:.4}
+.ct{background:#fff;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+.cth{display:flex;gap:6px;padding:8px;background:var(--h);color:var(--t)}
+.cth input{flex:1;min-width:0;background:transparent;border:0;color:var(--t);font-weight:700;font-size:1.3rem;padding:2px 6px}
+.cth button{min-height:34px;padding:0 10px;border:0;border-radius:8px;background:rgba(255,255,255,.7);font-size:.8rem}
+.cg{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;padding:8px}
+.cg button{min-height:54px;border:0;background:var(--c);color:var(--t);border-radius:8px;font-size:1.4rem;font-weight:700}
+.n1 .cg button{min-height:96px;font-size:2.6rem}
+.cg button.gone{color:transparent;background:#fff;border:1.5px dashed var(--line)}
 
 </style>
 </head>
@@ -176,34 +177,32 @@ const BOARD0 = { settings: { semesterStart: "2026-08-31" }, events: [], morningT
 
 const home = {
   id: "home", icon: "🏠", title: "首頁", summary: async () => null,
-  async render(el) {
-    const items = (await Promise.all(MODS.map(m => m.summary()))).filter(Boolean);
-    if (!ctx.roster.length) items.unshift({ text: "尚未設定學生名單", badge: "去設定", go: "settings" });
-    el.innerHTML = `<section class="hero"><small>${today()}</small><h1>${esc(ctx.cfg.className)}</h1>
-      <p>每天最常用的入口與提醒。</p><div class="quick"><button class="btn hot" data-go="board">開黑板</button>
-      <button class="btn" data-go="corrections">查訂正</button><button class="btn" data-go="points">加分</button></div></section>
-      <section class="card"><h2>待處理提醒</h2>${items.map(i => `<div class="row"><span>${i.text}</span>
-      <button class="badge" ${i.go ? `data-go="${i.go}"` : ""}>${i.badge}</button></div>`).join("") || `<p class="muted">目前沒有待處理的事項。</p>`}</section>`;
-  }
+  async render(el) { const p = buildProj(await getKV("board", BOARD0), false); el.append(p); window.__iv = p._iv; }
 };
-
 const seatNums = () => seatList().map(r => r.seat);
 const DAYS = ["一", "二", "三", "四", "五"];
 
 // ---- 投影頁：乾淨白底 + 可拖曳的小訂正表 ----
-function openProj(b) {
+function buildProj(b, overlay) {
   const d = dow(today()), day = d ? (b.weeksData?.[weekNo(b, today())]?.[d] || {}) : {};
-  const p = document.createElement("div"); p.className = "projw";
-  p.innerHTML = `<button class="pc" id="pT" style="left:12px;right:auto">＋ 訂正表</button><button class="pc" id="pX">✕</button>
+  const p = document.createElement("div"); p.className = "projw" + (overlay ? " ov" : "");
+  p.innerHTML = `<button class="pc" id="pT" style="left:12px;right:auto">＋ 訂正表</button>${overlay ? `<button class="pc" id="pX">✕</button>` : ""}
     <div class="pclk"></div><div class="pdate"></div><div class="pbox">
     <section><h2>早自修任務：</h2><div>${esc(d ? b.morningTemplates?.[d] : "")}</div></section>
     <section><h2>聯絡簿：</h2><div>${esc(day.homework)}</div></section></div>`;
   const clk = () => { const n = new Date();
     p.querySelector(".pclk").textContent = [n.getHours(), n.getMinutes(), n.getSeconds()].map(x => String(x).padStart(2, "0")).join("：");
     p.querySelector(".pdate").textContent = n.toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric", weekday: "long" }); };
-  clk(); const iv = setInterval(clk, 1000);
+  clk(); const iv = (p._iv = setInterval(clk, 1000));
   p.onclick = e => { if (e.target.id === "pX") { clearInterval(iv); p.remove(); } if (e.target.id === "pT") floatTracker(p, b); };
-  document.body.append(p);
+  return p;
+}
+const openProj = b => document.body.append(buildProj(b, true));
+function bigClock(el) {
+  const c = document.createElement("div"); c.className = "bclk";
+  const t = () => { const n = new Date(), z = x => String(x).padStart(2, "0");
+    c.innerHTML = `<b>${z(n.getHours())}:${z(n.getMinutes())}:${z(n.getSeconds())}</b><small>${n.getFullYear()}.${z(n.getMonth() + 1)}.${z(n.getDate())}</small>`; };
+  t(); window.__iv = setInterval(t, 1000); el.prepend(c);
 }
 function floatTracker(p, b) {
   if (p.querySelector(".ft")) return;
@@ -225,7 +224,7 @@ function floatTracker(p, b) {
 
 // ---- 班級黑板：一頁一週，「作業」欄即當天聯絡簿 ----
 const board = {
-  id: "board", icon: "📋", title: "班級黑板", week: null,
+  id: "board", icon: "📋", title: "行事曆", week: null,
   async summary() {
     const b = await getKV("board", BOARD0), d = dow(today());
     return d && !b.weeksData?.[weekNo(b, today())]?.[d]?.homework ? { text: "今日聯絡簿尚未填寫", badge: "待填寫", go: "board" } : null;
@@ -238,8 +237,8 @@ const board = {
       const rows = [1, 2, 3, 4, 5].map(d => { const dt = new Date(w0); dt.setDate(dt.getDate() + (wk - 1) * 7 + d - 1);
         const day = b.weeksData?.[wk]?.[d] || {};
         return `<tr class="${ymd(dt) === t0 ? "today" : ""}"><th>${dt.getMonth() + 1}/${dt.getDate()}（${DAYS[d - 1]}）</th>${F.map(([k]) => `<td><textarea data-d="${d}" data-k="${k}">${esc(day[k])}</textarea></td>`).join("")}</tr>`; }).join("");
-      el.innerHTML = `<h2>班級黑板</h2><div class="bar"><button class="chip" data-w="-1">◀ 上一週</button><b>第 ${wk} 週</b>
-        <button class="chip" data-w="1">下一週 ▶</button><button class="chip" data-w="0">本週</button><button class="btn hot" id="bProj">開啟投影</button></div>
+      el.innerHTML = `<h2>行事曆</h2><div class="bar"><button class="chip" data-w="-1">◀ 上一週</button><b>第 ${wk} 週</b>
+        <button class="chip" data-w="1">下一週 ▶</button><button class="chip" data-w="0">本週</button><button class="btn hot" id="bProj">全螢幕投影</button></div>
         <div class="wrap"><table class="wk"><tr><th></th>${F.map(([, n]) => `<th>${n}</th>`).join("")}</tr>${rows}</table></div>
         <p class="muted">「作業」欄會自動成為當天的聯絡簿，輸入後會自動儲存。 <span id="bMsg"></span></p>
         <h3>早自修任務（每週固定，投影時顯示）</h3><div class="bar">${DAYS.map((n, i) => `<label>週${n}<textarea class="s" data-m="${i + 1}">${esc(b.morningTemplates?.[i + 1])}</textarea></label>`).join("")}</div>`;
@@ -256,7 +255,7 @@ const board = {
 };
 
 // ---- 作業訂正：最多四張，可收合；點座號消除，再點恢復 ----
-const COLORS = ["#4472c4", "#f5b400", "#70ad47", "#8e8e8e"];
+const COLORS = [["#D3E6DE", "#2F5E4E", "#EDF5F1"], ["#F1D6DD", "#7A3A4A", "#FBF0F3"], ["#EADFC9", "#5C4B2E", "#F7F2E7"], ["#D9E3E7", "#2F4550", "#EEF3F5"]];
 const corrections = {
   id: "corrections", icon: "✏️", title: "作業訂正",
   async summary() {
@@ -266,10 +265,11 @@ const corrections = {
   async render(el) {
     const c = await getKV("corr2", { tables: [{ id: "1", title: "國習", color: 0, hidden: false, done: [] }] }), nums = seatNums();
     const get = id => c.tables.find(x => x.id === id);
+    el.innerHTML = `<div id="cBody"></div>`; bigClock(el);
     const draw = () => { const vis = c.tables.filter(t => !t.hidden), hid = c.tables.filter(t => t.hidden);
-      el.innerHTML = `<h2>作業訂正</h2><div class="bar">${hid.map(t => `<button class="chip" data-show="${t.id}">展開：${esc(t.title)}</button>`).join("")}
+      $("#cBody").innerHTML = `<h2>作業訂正</h2><div class="bar">${hid.map(t => `<button class="chip" data-show="${t.id}">展開：${esc(t.title)}</button>`).join("")}
         ${c.tables.length < 4 ? `<button class="btn on" id="cAdd">＋ 新增訂正表</button>` : ""}</div>
-        <div class="ctabs n${vis.length}">${vis.map(t => `<section class="ct"><div class="cth" style="background:${COLORS[t.color % 4]}">
+        <div class="ctabs n${vis.length}">${vis.map(t => `<section class="ct" style="--h:${COLORS[t.color % 4][0]};--t:${COLORS[t.color % 4][1]};--c:${COLORS[t.color % 4][2]}"><div class="cth">
         <input data-t="${t.id}" value="${esc(t.title)}"><button data-hide="${t.id}">收合</button><button data-rm="${t.id}">刪除</button></div>
         <div class="cg">${nums.map(s => `<button class="${t.done.includes(s) ? "gone" : ""}" data-tb="${t.id}" data-s="${s}">${s}</button>`).join("")}</div></section>`).join("")
         || `<p class="muted">目前沒有展開的訂正表。</p>`}</div>`; };
@@ -287,23 +287,69 @@ const corrections = {
 };
 
 // ---- 加分：先選人（可一鍵全選再取消少數），再按加減分；國語依座位表排列 ----
+const ST = ["準時", "遲到", "缺席", "公差", "請假"], PERIODS = ["遲到", "早自修", "第1節", "第2節", "第3節", "第4節", "午休", "第5節", "第6節", "第7節"];
+const normSt = s => ({ "未到校": "缺席", "公差離班": "公差", "準時到校": "準時", "全勤": "準時" }[s] || s);
+const attendance = {
+  id: "attendance", icon: "🗓️", title: "出缺勤", date: today(), period: "早自修", summary: async () => null,
+  async render(el) {
+    const a = await getKV("attendance", {}); a.leaves ||= []; a.attendance ||= {}; a.periodAttendance ||= {};
+    const list = seatList(), nums = list.map(r => r.seat), names = Object.fromEntries(list.map(r => [r.seat, r.name]));
+    const grid = (a.seatGrid || []).map(Number).filter(n => !isNaN(n)).map(s => nums.includes(s) ? s : 0), cells = grid.length ? grid : nums;
+    let tm; const persist = () => { clearTimeout(tm); tm = setTimeout(() => setKV("attendance", a), 700); };
+    const leaveOf = (s, d) => a.leaves.find(l => +l.seat === s && d >= l.startDate && d <= l.endDate);
+    const stat = s => normSt(a.periodAttendance[this.date]?.[this.period]?.[s]) || (leaveOf(s, this.date) ? "請假" : "準時");
+    el.innerHTML = `<div id="aBody"></div>`; bigClock(el);
+    const draw = () => {
+      const sts = Object.fromEntries(nums.map(s => [s, stat(s)])), cnt = k => nums.filter(s => sts[s] === k);
+      const here = nums.length - cnt("缺席").length - cnt("請假").length - cnt("公差").length;
+      const ls = a.leaves.filter(l => l.endDate >= today()).sort((x, y) => x.startDate.localeCompare(y.startDate));
+      $("#aBody").innerHTML = `<div class="bar"><button class="chip" data-dd="-1">◀</button><b>${this.date}</b><button class="chip" data-dd="1">▶</button><button class="chip" data-dd="0">今天</button></div>
+        <div class="bar">${PERIODS.map(p => `<button class="chip ${p === this.period ? "on" : ""}" data-p="${p}">${p}</button>`).join("")}</div>
+        <div class="brd">應到 ${nums.length}　實到 ${here}　${ST.slice(1).map(k => cnt(k).length ? `${k}：${cnt(k).map(s => s + " " + (names[s] || "")).join("、")}` : "").filter(Boolean).join("　｜　")}</div>
+        <div class="seats" style="grid-template-columns:repeat(6,1fr)">${cells.map(s => s ? `<button class="seat st${ST.indexOf(sts[s])}" data-seat="${s}">${s}<small>${esc(names[s])}</small><b>${sts[s]}</b></button>` : `<span></span>`).join("")}</div>
+        <h3>請假登記</h3><div class="bar"><input id="lS" type="number" placeholder="座號" style="width:90px"><input id="lA" type="date" style="width:170px"><input id="lB" type="date" style="width:170px">
+        <input id="lR" placeholder="原因（選填）" style="width:200px"><button class="btn on" id="lAdd">新增</button></div>
+        ${ls.map(l => `<div class="row"><span>${l.seat} 號 ${esc(names[l.seat])}　${l.startDate}～${l.endDate}　${esc(l.reason || l.type)}</span><button class="chip" data-lr="${l.id}">刪除</button></div>`).join("") || `<p class="muted">目前沒有請假紀錄。</p>`}`;
+    };
+    el.onclick = e => { const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
+      if (d.dd != null) { const dt = new Date(this.date + "T00:00:00"); this.date = +d.dd ? ymd(new Date(dt.setDate(dt.getDate() + +d.dd))) : today(); }
+      else if (d.p) this.period = d.p;
+      else if (d.seat) { const s = +d.seat, nx = ST[(ST.indexOf(stat(s)) + 1) % 5];
+        ((a.periodAttendance[this.date] ||= {})[this.period] ||= {})[s] = nx;
+        if (this.period === "早自修") (a.attendance[this.date] ||= {})[s] = nx; persist(); }
+      else if (d.lr) { a.leaves = a.leaves.filter(l => l.id !== d.lr); persist(); }
+      else if (t.id === "lAdd") { const s = +$("#lS").value, sd = $("#lA").value; if (!s || !sd) return;
+        a.leaves.push({ id: String(Date.now()), seat: s, type: "請假", reason: $("#lR").value, startDate: sd, endDate: $("#lB").value || sd }); persist(); }
+      else return;
+      draw(); };
+    draw();
+  }
+};
+
 const points = {
   id: "points", icon: "⭐", title: "加分系統", subj: "chinese", sel: new Set(), summary: async () => null,
   async render(el) {
     const p = await getKV("points", { studentCount: 28, scores: {} }), att = await getKV("attendance", {});
-    const S = [["chinese", "國語"], ["math", "數學"], ["order", "秩序"]], list = seatList(p.studentCount), nums = list.map(r => r.seat);
+    const S = [["chinese", "國語"], ["math", "數學"], ["order", "綜合（秩序）"]], list = seatList(p.studentCount), nums = list.map(r => r.seat);
+    const PRE = { chinese: [1, 2, 3, -1], math: [1, 2, 3, -1], order: [1, 3, 6, 10, 15, -5, -10] };
     const names = Object.fromEntries(list.map(r => [r.seat, r.name]));
     const grid = (att.seatGrid || []).map(Number).filter(n => !isNaN(n)).map(s => nums.includes(s) ? s : 0);
     const draw = () => { const ch = this.subj === "chinese" && grid.length, cells = ch ? grid : nums;
-      el.innerHTML = `<h2>加分系統</h2><div class="bar">${S.map(([k, n]) => `<button class="chip ${k === this.subj ? "on" : ""}" data-sj="${k}">${n}</button>`).join("")}</div>
-        <div class="bar"><button class="chip" data-all="1">全選全班</button><button class="chip" data-none="1">清除選取</button><span>已選 ${this.sel.size} 人</span>
-        ${[1, 2, -1].map(v => `<button class="btn on" data-ap="${v}" ${this.sel.size ? "" : "disabled"}>${v > 0 ? "＋" : "－"}${Math.abs(v)}</button>`).join("")}</div>
-        <div class="seats" style="grid-template-columns:repeat(${ch ? 6 : 10},1fr)">${cells.map(s => s ? `<button class="seat ${this.sel.has(s) ? "sel" : ""}" data-seat="${s}">${s}<small>${esc(names[s])}</small><b>${p.scores[s]?.[this.subj] || 0}</b></button>` : `<span></span>`).join("")}</div>`; };
+      el.innerHTML = `<h2>加分系統</h2><div class="bar">${S.map(([k, n]) => `<button class="chip k-${k} ${k === this.subj ? "on" : ""}" data-sj="${k}">${n}</button>`).join("")}</div>
+        <div class="bar"><button class="chip" data-all="1">全選全班</button><button class="chip" data-none="1">清除選取</button><b>已選 ${this.sel.size} 人</b>
+        ${PRE[this.subj].map(v => `<button class="btn on" data-ap="${v}" ${this.sel.size ? "" : "disabled"}>${v > 0 ? "＋" : "－"}${Math.abs(v)}</button>`).join("")}</div>
+        <div class="seats" style="grid-template-columns:repeat(${ch ? 6 : 10},1fr)">${cells.map(s => s ? `<button class="seat ${this.sel.has(s) ? "sel" : ""}" data-seat="${s}">${s}<small>${esc(names[s])}</small><b>${p.scores[s]?.[this.subj] || 0}</b></button>` : `<span></span>`).join("")}</div>
+        <div class="bar"><button class="chip" id="pX">匯出 Excel（CSV）</button><button class="chip" id="pR1">清空當前科目分數</button><button class="chip" id="pR2">重置全部分數</button></div>`; };
     el.onclick = async e => { const t = e.target.closest("button"); if (!t || t.disabled) return; const d = t.dataset;
       if (d.sj) this.subj = d.sj;
       else if (d.all) this.sel = new Set(nums); else if (d.none) this.sel = new Set();
       else if (d.seat) { const s = +d.seat; this.sel.has(s) ? this.sel.delete(s) : this.sel.add(s); }
       else if (d.ap) { for (const s of this.sel) { const o = (p.scores[s] ||= {}); o[this.subj] = (o[this.subj] || 0) + +d.ap; } this.sel = new Set(); await setKV("points", p); }
+      else if (t.id === "pX") { const rows = [["座號", "姓名", "國語", "數學", "綜合", "總分"], ...nums.map(s => { const o = p.scores[s] || {}, c = o.chinese || 0, m = o.math || 0, r = o.order || 0; return [s, names[s] || "", c, m, r, c + m + r]; })];
+        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv;charset=utf-8" }));
+        a.download = `加分登記表_${today()}.csv`; a.click(); return; }
+      else if (t.id === "pR1") { if (!confirm("確定清空「" + S.find(x => x[0] === this.subj)[1] + "」的所有分數？")) return; nums.forEach(s => { if (p.scores[s]) p.scores[s][this.subj] = 0; }); await setKV("points", p); }
+      else if (t.id === "pR2") { if (!confirm("確定重置全班所有科目的分數？此動作無法復原，建議先匯出。")) return; p.scores = {}; await setKV("points", p); }
       else return;
       draw(); };
     draw();
@@ -363,12 +409,12 @@ const settings = {
   }
 };
 
-const MODS = [home, board, stub("attendance", "🗓️", "出缺勤", "出缺勤畫面下一階段接上；你的出缺勤備份現在就可以先匯入保存。"), corrections, points, data, settings];
+const MODS = [home, board, attendance, corrections, points, data, settings];
 
 function fill() { $("#clsName").textContent = ctx.cfg.className; $("#clsInfo").textContent = `${ctx.roster.length} 位學生`; }
 function go(id) {
   $("#nav").innerHTML = MODS.map(m => `<button data-go="${m.id}" class="${m.id === id ? "on" : ""}"><span>${m.icon}</span><span class="t">${m.title}</span></button>`).join("");
-  const el = $("#view"); el.onclick = el.onchange = null; el.innerHTML = "";
+  clearInterval(window.__iv); const el = $("#view"); el.onclick = el.onchange = null; el.innerHTML = "";
   Promise.resolve(MODS.find(m => m.id === id).render(el)).catch(err => el.innerHTML = `<div class="card"><h2>這一頁載入失敗</h2><p class="muted">${esc(err.message)}</p></div>`);
 }
 document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
