@@ -125,6 +125,29 @@ pre.brd{white-space:pre-wrap;font:inherit}
 em.tag{display:block;font-size:.75rem;font-style:normal;font-weight:400;background:rgba(255,255,255,.7);border-radius:6px;padding:0 6px}
 select{font:inherit;padding:8px;border-radius:12px;border:1px solid var(--line);background:#fff}
 
+.pbar{height:14px;background:var(--soft);border-radius:999px;overflow:hidden;flex:1;min-width:160px}.pbar i{display:block;height:100%;background:var(--acc)}
+.mit{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin:8px 0}
+.mit.dn .tt{text-decoration:line-through;opacity:.5}
+.ckb{flex:none;width:44px;height:44px;border:2px solid var(--line);border-radius:10px;background:#fff;font-weight:700;font-size:1.3rem;color:var(--acc)}
+.tg{border-radius:999px;padding:2px 12px;font-size:.8rem;font-weight:700}
+.nt{background:#EADFC9;color:#5C4B2E;border-radius:8px;padding:1px 10px;font-size:.85rem;margin-left:8px}
+.brd.warn{background:#EADFC9;border-color:#C4B49E}
+.mproj{position:fixed;inset:0;background:#fff;color:#000;z-index:9;padding:3vh 4vw;overflow:auto}
+.mtop{display:flex;justify-content:space-between;align-items:center;font-size:2.4vw;font-weight:700;margin-bottom:2vh}
+.mtop button{min-height:46px;padding:0 16px;margin-left:8px;border:1px solid #ccc;background:#fff;border-radius:10px;font-size:1.4rem}
+.mi{display:flex;gap:2vw;align-items:flex-start;padding:2vh 2vw;border:3px solid #000;border-radius:24px;margin-bottom:2vh;cursor:pointer}
+.mi.spot{box-shadow:0 0 0 6px #9FAF83,0 0 30px #9FAF83}
+.dim .mi:not(.spot){opacity:.25}
+.mck{flex:none;width:1.4em;height:1.4em;border:3px solid #000;border-radius:12px;background:#fff;font-size:inherit;font-weight:700}
+.mi.dn .mt{text-decoration:line-through;opacity:.5}
+.mi em{font-style:normal;font-size:.5em;padding:2px 14px;border-radius:999px}
+.mt{font-weight:700}
+.mn{font-size:.6em;background:#EADFC9;border-radius:10px;padding:2px 12px;display:inline-block;margin-top:4px}
+
+#snd{margin-left:8px;min-height:40px}
+header{justify-content:flex-start;gap:0}
+#clock{margin-left:auto}
+
 </style>
 </head>
 <body>
@@ -150,7 +173,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, doc, getDoc, setDoc, updateDoc,
-  collection, addDoc, query, where, getDocs }
+  collection, addDoc, query, where, getDocs, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const app = initializeApp({
@@ -194,6 +217,16 @@ async function allKV() {
   const o = {};
   (await getDocs(collection(db, "kv"))).docs.forEach(d => o[d.id] = JSON.parse(d.data().json));
   return o;
+}
+
+// 即時同步：其他裝置修改資料時通知畫面更新（本機自己的寫入不會觸發）
+function watchKV(cb) {
+  let first = true;
+  return onSnapshot(collection(db, "kv"), snap => {
+    if (first) { first = false; return; }
+    const ids = snap.docChanges().filter(c => c.type !== "removed" && !c.doc.metadata.hasPendingWrites).map(c => c.doc.id);
+    if (ids.length) cb(ids);
+  }, () => {});
 }
 
 
@@ -338,7 +371,7 @@ const corrections = {
     el.onclick = async e => { const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
       if (!d.rs) this.cf = null;
       if (d.rs) { if (this.cf === d.rs) { get(d.rs).done = []; this.cf = null; } else { this.cf = d.rs; draw(); return; } }
-      else if (d.s) { const tb = get(d.tb), s = +d.s; tb.done = tb.done.includes(s) ? tb.done.filter(x => x !== s) : [...tb.done, s]; }
+      else if (d.s) { const tb = get(d.tb), s = +d.s, was = tb.done.includes(s); tb.done = was ? tb.done.filter(x => x !== s) : [...tb.done, s]; if (!was) (tb.done.length >= nums.length ? cheer() : sTick()); }
       else if (d.hide) get(d.hide).hidden = true; else if (d.show) get(d.show).hidden = false;
       else if (d.rm) { if (!confirm("確定刪除這張訂正表？")) return; c.tables = c.tables.filter(x => x.id !== d.rm); }
       else if (t.id === "cAdd") { const used = c.tables.map(x => x.color);
@@ -365,7 +398,7 @@ const attendance = {
     const nm = s => `${s} ${esc(names[s] || "")}`, DN = ["一", "二", "三", "四", "五"];
     const rdOf = (d, s) => { const w = dow(d); return w ? a.routineDuties.filter(r => +r.seat === s && (r.days || []).map(String).some(x => x === String(w) || x === DN[w - 1])).map(r => r.team) : []; };
     const grid = (a.seatGrid || []).map(Number).filter(n => !isNaN(n)).map(s => nums.includes(s) ? s : 0), cells = grid.length ? grid : nums;
-    let tm; const persist = () => { clearTimeout(tm); tm = setTimeout(() => setKV("attendance", a), 700); };
+    let tm; const persist = () => { window.__dirty = true; clearTimeout(tm); tm = setTimeout(async () => { await setKV("attendance", a); window.__dirty = false; }, 700); };
     const leaveOf = (s, d) => a.leaves.find(l => +l.seat === s && d >= l.startDate && d <= l.endDate);
     const stOf = (d, p, s) => normSt(a.periodAttendance[d]?.[p]?.[s]) || (leaveOf(s, d) ? "請假" : p === "早自修" && rdOf(d, s).length ? "公差" : "準時");
     const eSt = (d, s) => normSt(a.periodAttendance[d]?.["早自修"]?.[s]) || normSt(a.attendance[d]?.[s]) || (leaveOf(s, d) ? "請假" : rdOf(d, s).length ? "公差" : "準時");
@@ -482,6 +515,80 @@ const points = {
   }
 };
 
+// ---- 音效（用瀏覽器合成，不需音檔）與即時同步 ----
+let AC, SND = true; try { SND = localStorage.getItem("snd") !== "0"; } catch {}
+const beep = notes => { if (!SND) return; try { AC ||= new (window.AudioContext || window.webkitAudioContext)(); const t0 = AC.currentTime;
+  notes.forEach(([fq, d, s = 0]) => { const o = AC.createOscillator(), g = AC.createGain(); o.type = "triangle"; o.frequency.value = fq; o.connect(g); g.connect(AC.destination);
+    g.gain.setValueAtTime(0.0001, t0 + s); g.gain.exponentialRampToValueAtTime(0.3, t0 + s + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + s + d); o.start(t0 + s); o.stop(t0 + s + d + 0.05); }); } catch {} };
+const sTick = () => beep([[880, .12], [1320, .16, .07]]);
+const cheer = () => beep([[523, .2], [659, .2, .16], [784, .2, .32], [1047, .2, .48], [784, .15, .66], [1047, .6, .78]]);
+const hooks = new Set();
+
+// ---- 備忘錄（宣達事項）----
+const TAGS = [["ann", "📢", "宣導事項", "#EADFC9", "#5C4B2E"], ["fee", "💰", "收繳費用/回條", "#E4ECDD", "#3F5230"], ["hw", "✏️", "作業/訂正", "#D9E3E7", "#2F4550"], ["cad", "⭐", "幹部工作", "#E7E0F0", "#4E3B6B"], ["now", "🔥", "即刻任務", "#F1D6DD", "#7A3A4A"]];
+const tagOf = k => TAGS.find(x => x[0] === k) || TAGS[0];
+function memoProj(m, date, onClose) {
+  let fs = 3, spot = null; const p = document.createElement("div"); p.className = "mproj";
+  const draw = () => { const items = m.items.filter(i => i.date === date);
+    p.innerHTML = `<div class="mtop"><b>${date} 宣達事項</b><span><button data-fs="-1">A−</button><button data-fs="1">A＋</button><button data-x="1">✕</button></span></div>
+      <div class="mlist ${spot ? "dim" : ""}" style="font-size:${fs}vw">${items.map(i => { const t = tagOf(i.tag);
+        return `<div class="mi ${i.done ? "dn" : ""} ${spot === i.id ? "spot" : ""}" data-sp="${i.id}"><button class="mck" data-ck="${i.id}">${i.done ? "✓" : ""}</button>
+        <div><em style="background:${t[3]};color:${t[4]}">${t[1]} ${t[2]}</em><div class="mt">${esc(i.title)}</div>${i.note ? `<div class="mn">${esc(i.note)}</div>` : ""}</div></div>`; }).join("") || "<p>今天沒有宣達事項</p>"}</div>`; };
+  p.onclick = async e => { const b = e.target.closest("button"), c = e.target.closest("[data-sp]");
+    if (b?.dataset.x) { p.remove(); onClose(); return; }
+    if (b?.dataset.fs) fs = Math.min(6, Math.max(1.5, fs + +b.dataset.fs * .4));
+    else if (b?.dataset.ck) { const it = m.items.find(i => i.id === b.dataset.ck); it.done = !it.done; if (it.done) (m.items.filter(i => i.date === it.date).every(i => i.done) ? cheer() : sTick()); await setKV("memo", m); }
+    else if (c) spot = spot === c.dataset.sp ? null : c.dataset.sp;
+    draw(); };
+  draw(); document.body.append(p);
+  const hk = async keys => { if (keys.includes("memo")) { m.items = (await getKV("memo", { items: [] })).items; draw(); } };
+  hooks.add(hk); const rm0 = p.remove.bind(p); p.remove = () => { hooks.delete(hk); rm0(); };
+}
+const memo = {
+  id: "memo", icon: "📝", title: "備忘錄", date: today(), tag: "ann", filter: "all", hide: false, summary: async () => null,
+  async render(el) {
+    const m = await getKV("memo", { items: [] }), save = () => setKV("memo", m);
+    const addDays = (d, n) => ymd(new Date(new Date(d + "T00:00:00").getTime() + n * 864e5));
+    const draw = () => {
+      const kT = $("#mT")?.value || "", kN = $("#mN")?.value || "";
+      const all = m.items.filter(i => i.date === this.date).sort((x, y) => x.ts - y.ts), done = all.filter(i => i.done).length, pct = all.length ? Math.round(done / all.length * 100) : 0;
+      const shown = all.filter(i => (this.filter === "all" || i.tag === this.filter) && !(this.hide && i.done)), late = m.items.filter(i => i.date < today() && !i.done);
+      const wd = "日一二三四五六"[new Date(this.date + "T00:00:00").getDay()];
+      el.innerHTML = `<div class="bar"><button class="chip" data-dd="-1">◀ 前一天</button><input type="date" id="mD" value="${this.date}" style="width:180px"><span class="badge">週${wd}</span>
+        <button class="chip" data-dd="0">今天</button><button class="chip" data-dd="1">後一天 ▶</button><button class="btn on" id="mProj">大字投影宣達模式</button></div>
+        ${late.length ? `<div class="brd warn">⚠️ 歷史／昨日尚有 ${late.length} 項未完成！ <button class="chip" id="mAllToday">一鍵全部移至今天</button></div>` : ""}
+        <div class="card"><div class="bar" style="margin:0"><b>今日宣達進度　${done} / ${all.length} 已宣達完成　${pct}%</b>${all.length && done === all.length ? `<span class="badge">🎉 全數完成！</span>` : ""}
+          <div class="pbar"></div><button class="chip" id="mHide">${this.hide ? "顯示" : "隱藏"}已完成事項</button></div></div>
+        <div class="card"><div class="bar" style="margin:0"><input id="mT" placeholder="輸入事項（例：抄聯絡簿第四條、收戶外教學回條、發下數學考卷）" value="${esc(kT)}" style="flex:1;min-width:260px"><button class="btn on" id="mAdd">＋ 新增到清單</button></div>
+          <div class="bar">${TAGS.map(t => `<button class="chip ${t[0] === this.tag ? "on" : ""}" data-tg="${t[0]}" style="${t[0] === this.tag ? "" : `background:${t[3]};color:${t[4]}`}">${t[1]} ${t[2]}</button>`).join("")}
+          <input id="mN" placeholder="補充備註或座號（例：3, 12, 19 號未交）" value="${esc(kN)}" style="flex:1;min-width:240px"></div></div>
+        <div class="bar"><button class="chip ${this.filter === "all" ? "on" : ""}" data-f="all">全部事項</button>${TAGS.map(t => `<button class="chip ${this.filter === t[0] ? "on" : ""}" data-f="${t[0]}">${t[1]}</button>`).join("")}<span class="muted">共 ${shown.length} 項</span></div>
+        ${shown.map(i => { const t = tagOf(i.tag); return `<div class="mit ${i.done ? "dn" : ""}"><button class="ckb" data-ck="${i.id}">${i.done ? "✓" : ""}</button>
+          <div style="flex:1"><span class="tg" style="background:${t[3]};color:${t[4]}">${t[1]} ${t[2]}</span> <small>${new Date(i.ts).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}</small>
+          <div class="tt"><b>${esc(i.title)}</b>${i.note ? `<span class="nt">${esc(i.note)}</span>` : ""}</div></div>
+          <button class="chip" data-nx="${i.id}">順延隔天</button>${i.date !== today() ? `<button class="chip" data-td="${i.id}">移至今天</button>` : ""}<button class="chip" data-rm="${i.id}">刪除</button></div>`; }).join("") || `<p class="muted">這天沒有事項。</p>`}`;
+      el.querySelector(".pbar").innerHTML = `<i style="width:${pct}%"></i>`;
+    };
+    const item = id => m.items.find(i => i.id === id);
+    el.onclick = async e => { const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
+      if (d.dd != null) this.date = +d.dd ? addDays(this.date, +d.dd) : today();
+      else if (d.tg) this.tag = d.tg; else if (d.f) this.filter = d.f;
+      else if (t.id === "mHide") this.hide = !this.hide;
+      else if (t.id === "mAdd") { const ti = $("#mT").value.trim(); if (!ti) return; m.items.push({ id: String(Date.now()), date: this.date, title: ti, tag: this.tag, note: $("#mN").value.trim(), done: false, ts: Date.now() }); await save(); $("#mT").value = ""; $("#mN").value = ""; }
+      else if (d.ck) { const x = item(d.ck); x.done = !x.done; if (x.done) (m.items.filter(i => i.date === x.date).every(i => i.done) ? cheer() : sTick()); await save(); }
+      else if (d.nx) { item(d.nx).date = addDays(item(d.nx).date, 1); await save(); }
+      else if (d.td) { item(d.td).date = today(); await save(); }
+      else if (d.rm) { if (!confirm("確定刪除這個事項？")) return; m.items = m.items.filter(i => i.id !== d.rm); await save(); }
+      else if (t.id === "mAllToday") { m.items.filter(i => i.date < today() && !i.done).forEach(i => i.date = today()); await save(); }
+      else if (t.id === "mProj") return memoProj(m, this.date, draw);
+      else return;
+      draw(); };
+    el.onchange = e => { if (e.target.id === "mD" && e.target.value) { this.date = e.target.value; draw(); } };
+    el.onkeydown = e => { if (e.key === "Enter" && e.target.id === "mT") $("#mAdd").click(); };
+    draw();
+  }
+};
+
 // ---- 資料匯入：三份舊備份各自上傳，另有新系統的完整備份 ----
 const IMPORTS = [
   { key: "board", label: "行事曆／聯絡簿備份（教學儀錶板）", ok: d => d.weeksData || d.events,
@@ -555,26 +662,33 @@ const settings = {
   }
 };
 
-const MODS = [home, corrections, points, attendance, board, data, settings];
+const MODS = [home, corrections, points, attendance, memo, board, data, settings];
 
 function fill() { $("#clsName").textContent = ctx.cfg.className; $("#clsInfo").textContent = `${ctx.roster.length} 位學生`; }
-function go(id) {
+let cur = "home", pend = false, unsub = null;
+const busy = () => { const e = document.activeElement; return !!e && !!e.matches && e.matches("input,textarea,select,[contenteditable='true']"); };
+function refresh() { if (busy() || window.__dirty) { pend = true; setTimeout(() => pend && refresh(), 1500); return; } pend = false; go(cur); }
+const onRemote = async keys => { if (hooks.size) { for (const h of hooks) await h(keys); return; }
+  if (document.querySelector(".projw.ov, .mproj")) return; refresh(); };
+function go(id) { cur = id;
   $("#nav").innerHTML = MODS.map(m => `<button data-go="${m.id}" class="${m.id === id ? "on" : ""}"><span>${m.icon}</span><span class="t">${m.title}</span></button>`).join("");
   clearInterval(window.__iv); const el = $("#view"); el.onclick = el.onchange = null; el.removeAttribute("data-sj"); el.innerHTML = "";
   Promise.resolve(MODS.find(m => m.id === id).render(el)).catch(err => el.innerHTML = `<div class="card"><h2>這一頁載入失敗</h2><p class="muted">${esc(err.message)}</p></div>`);
 }
 document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
 $("#fold").onclick = () => $("#app").classList.toggle("fold");
+{ const sb = document.createElement("button"); sb.id = "snd"; sb.className = "chip"; const lab = () => sb.textContent = SND ? "🔊 音效開" : "🔇 音效關"; lab(); $("#fold").after(sb);
+  sb.onclick = () => { SND = !SND; try { localStorage.setItem("snd", SND ? "1" : "0"); } catch {} lab(); if (SND) sTick(); }; }
 $("#signin").onclick = () => login().catch(e => $("#loginMsg").textContent = "登入失敗：" + e.message);
 const tick = () => $("#clock").textContent = new Date().toLocaleString("zh-TW", { month: "numeric", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false });
 setInterval(tick, 20000); tick();
 
 onUser(async user => {
-  $("#login").hidden = !!user; $("#app").hidden = !user; if (!user) return;
+  $("#login").hidden = !!user; $("#app").hidden = !user; if (!user) { unsub?.(); return; }
   try {
     ctx.cfg = { ...ctx.cfg, ...(await getConfig("main", {})) };
     ctx.roster = (await getConfig("roster", { students: [] })).students;
-    fill(); go("home");
+    fill(); go("home"); unsub?.(); unsub = watchKV(onRemote);
   } catch (e) {
     $("#app").hidden = true; $("#login").hidden = false;
     $("#loginMsg").textContent = "此帳號沒有讀取權限，請確認 Firestore 規則中的 Email。"; logout();
