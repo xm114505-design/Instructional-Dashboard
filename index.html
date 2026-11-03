@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>課堂儀表板</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="login" class="center" hidden>
+  <div class="card">
+    <h1>課堂儀表板</h1>
+    <p id="loginMsg" class="muted">請用老師的 Google 帳號登入。</p>
+    <button id="signin" class="btn on">使用 Google 登入</button>
+  </div>
+</div>
+<div id="app" hidden>
+  <aside id="side">
+    <div class="cls"><small>正在使用</small><b id="clsName"></b><small id="clsInfo"></small></div>
+    <nav id="nav"></nav>
+  </aside>
+  <main>
+    <header><button id="fold" class="chip" aria-label="收合工具列">☰</button><span id="clock"></span></header>
+    <div id="view"></div>
+  </main>
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
