@@ -195,6 +195,14 @@ header{justify-content:flex-start;gap:0}
 .exfm label{display:block;margin-top:10px;font-weight:700}
 .xr{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:8px;align-items:center}
 
+.exbar{height:96px}
+.run{position:absolute;left:0;right:46px;bottom:0;height:0}
+.chick,.flag{font-size:0;line-height:0}
+.chick{bottom:26px}
+.flag{bottom:26px}
+.chick svg{display:block;animation:hop .7s ease-in-out infinite}
+@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
 </style>
 </head>
 <body>
@@ -713,6 +721,8 @@ const settings = {
 // ---- 考試看板：倒數、進度、出缺席、考前提醒（依考試名稱各自記錄）----
 const EXAM0 = { title: "期中考第一天", subjects: [{ name: "國語", start: "08:45", end: "09:25" }, { name: "數學", start: "09:35", end: "10:15" }, { name: "英語", start: "10:30", end: "11:10" }],
   remind: "", footer: "寫完記得檢查姓名與座號喔", absent: "", ding: true, warn: 5, profiles: {} };
+const CHICK_SVG = `<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><path d="M27 13c-1-5 4-7 8-4" fill="none" stroke="#2F4550" stroke-width="3" stroke-linecap="round"/><path d="M24 54v6M35 54v6" stroke="#F59E3B" stroke-width="3.5" stroke-linecap="round"/><ellipse cx="30" cy="35" rx="22" ry="20" fill="#FFD45E" stroke="#2F4550" stroke-width="3"/><path d="M50 31l10 4-10 5z" fill="#F59E3B" stroke="#2F4550" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="38" cy="29" rx="2.6" ry="3.4" fill="#2F4550"/><ellipse cx="42" cy="40" rx="4.6" ry="3" fill="#F7A8B8"/><path d="M13 35c4 9 13 11 19 4" fill="none" stroke="#2F4550" stroke-width="3" stroke-linecap="round"/></svg>`;
+const FLAG_SVG = `<svg viewBox="0 0 48 64" width="48" height="64" aria-hidden="true"><path d="M11 6h31l-7 8 7 8H11z" fill="#F7A8B8" stroke="#2F4550" stroke-width="3" stroke-linejoin="round"/><path d="M11 4v58" stroke="#2F4550" stroke-width="4" stroke-linecap="round"/></svg>`;
 const EX_TITLES = ["期中考第一天", "期中考第二天", "期末考第一天", "期末考第二天", "班級小考"], EX_SUBJ = ["國語", "數學", "英語", "自然", "社會", "生活", "健康", "綜合"];
 const ding = () => beep([[988, .35], [740, .7, .38]]);
 const mnt = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
@@ -741,7 +751,7 @@ const exam = {
       const left = !cur ? `<div class="exm"><h2>尚未設定科目</h2><p class="muted">請按下方「設定」新增考試科目與時間。</p></div>` : `<div class="exm"><span class="pill" style="background:#F1D6DD">第 ${s.i + 1} 科 / 共 ${subs.length} 科</span>
         <div class="exs"><span class="exn">${esc(cur.name)}</span><span class="exr">${cur.start} – ${cur.end}</span></div>
         ${s.mode === "done" ? `<div class="exc">考試結束，辛苦了！</div>` : `<div class="exc">${s.mode === "doing" ? "距離考試結束還有" : "距離考試開始還有"}<b id="exCd"></b></div><div id="exWarn"></div>
-        <div class="exbar"><span id="exChick" class="chick">🐥</span><span class="flag">🚩</span><div class="trk"><i id="exFill"></i></div></div><div class="exlb"><span>${cur.start}</span><span id="exPct">0%</span><span>${cur.end}</span></div>`}</div>`;
+        <div class="exbar"><div class="run"><span id="exChick" class="chick">${CHICK_SVG}</span></div><span class="flag">${FLAG_SVG}</span><div class="trk"><i id="exFill"></i></div></div><div class="exlb"><span>${cur.start}</span><span id="exPct">0%</span><span>${cur.end}</span></div>`}</div>`;
       $("#exBody").innerHTML = `<div class="extitle"><mark>${esc(ex.title)}</mark></div><div class="exrow">${left}
         <div class="exm"><span class="pill" style="background:#D3E6DE">出缺席</span><div class="exnum"><div style="background:#D9E3E7"><small>應到</small><b>${list.length}</b>人</div><div style="background:#D3E6DE"><small>實到</small><b>${list.length - ab.length}</b>人</div></div>
           <div class="exab"><small>缺席座號</small><div>${ab.length ? ab.map(x => `${x}${nm[x] ? " " + esc(nm[x]) : ""}`).join("、") : "全班到齊！"}</div></div></div></div>
