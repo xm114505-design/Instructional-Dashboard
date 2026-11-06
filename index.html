@@ -221,6 +221,8 @@ details summary{cursor:pointer;margin:10px 0;font-weight:700}
 
 @media(max-width:1000px){.wgrid{grid-template-columns:repeat(5,1fr)}}
 
+.tb td:nth-child(6){font-size:1.4rem;letter-spacing:2px;white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -517,9 +519,12 @@ const attendance = {
       week: () => { const wk = wkDates(this.date);
         const rows = nums.map(s => { let e = 0, n = 0, c = 0, dt = []; wk.forEach(d => { const ev = []; if (eSt(d, s) === "遲到") { e++; ev.push("早修遲到"); }
           const nx = stOf(d, "午休", s); if (["遲到", "缺席", "公差"].includes(nx)) { n++; ev.push("午休" + nx); }
-          PERIODS.slice(2).forEach(p => { if (p !== "午休" && stOf(d, p, s) === "遲到") { c++; ev.push(p + "遲到"); } }); if (ev.length) dt.push(d.slice(5) + " " + ev.join("、")); }); return [s, names[s] || "", e, n, c, dt.join("；")]; });
-        this.rows = [["座號", "姓名", "早修遲到", "午休狀況", "課堂遲到", "每日明細"], ...rows];
-        return `<p>${wk[0]} ～ ${wk[4]}（用上方日期切換週次）</p>` + tables(this.rows[0], rows, "week"); },
+          PERIODS.slice(2).forEach(p => { if (p !== "午休" && stOf(d, p, s) === "遲到") { c++; ev.push(p + "遲到"); } }); if (ev.length) dt.push(d.slice(5) + " " + ev.join("、")); }); // 點數：課堂遲到 0 次→1 綠點（早修遲到＋午休狀況超過 4 次則不給）；1 次→不加不扣；N 次→N−1 黃點
+          const g = c === 0 && e + n <= 4, y = c >= 2 ? c - 1 : 0, pt = g ? "🟢" : "🟡".repeat(y), ptTxt = g ? "1綠點" : y ? y + "黃點" : "";
+          return [s, names[s] || "", e, n, c, pt, dt.join("；"), ptTxt]; });
+        this.rows = [["座號", "姓名", "早修遲到", "午休狀況", "課堂遲到", "點數", "每日明細"], ...rows.map(r => [...r.slice(0, 5), r[7], r[6]])];
+        return `<p>${wk[0]} ～ ${wk[4]}（用上方日期切換週次）</p><p class="muted">點數規則：課堂遲到 0 次給 🟢 1 綠點（早修遲到＋午休狀況超過 4 次則不給）；1 次不加不扣；N 次給 🟡 (N−1) 個黃點。</p>`
+          + tables(this.rows[0], rows.map(r => r.slice(0, 7)), "week"); },
       term: () => { const ds = [...new Set([...Object.keys(a.attendance), ...Object.keys(a.periodAttendance)])].sort(), LT = ["事假", "病假", "公假", "喪假"];
         const wd = l => { let n = 0; for (let d = new Date(l.startDate + "T00:00:00"), z = new Date(l.endDate + "T00:00:00"); d <= z; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) n++; return n; };
         const rows = nums.map(s => { const lv = LT.map(t => a.leaves.filter(l => +l.seat === s && l.type === t).reduce((x, l) => x + (Number(l.days) || wd(l)), 0));
