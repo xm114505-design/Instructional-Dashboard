@@ -223,6 +223,20 @@ details summary{cursor:pointer;margin:10px 0;font-weight:700}
 
 .tb td:nth-child(6){font-size:1.4rem;letter-spacing:2px;white-space:nowrap}
 
+.exfix{margin:20px 0}
+.exfh{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.exfwarn{color:#8A2F2F;font-weight:700;font-size:1.5rem}
+.fxadd{display:flex;gap:10px;align-items:flex-start;margin:6px 0 12px}
+.fxadd textarea{min-height:72px;font-size:1.3rem}
+.fxi{position:relative;border:4px solid #C79B2D;border-radius:22px;background:#FFFBEA;padding:14px 20px;margin:12px 0}
+.fxn{background:#F2C94C;border:2px solid #2F4550;border-radius:999px;padding:0 14px;font-weight:700;margin-right:10px}
+.fxt{color:var(--mut)}
+.fxd{position:absolute;top:10px;right:12px;min-height:36px}
+.fxx{font-weight:700;line-height:1.35;margin-top:8px;white-space:pre-wrap}
+#view[data-pg=exam] .bclk b{font-size:7rem}
+#view[data-pg=exam] .exc b{font-size:5rem}
+#view[data-pg=exam] .exn{font-size:5.5rem}
+
 </style>
 </head>
 <body>
@@ -762,7 +776,7 @@ const hms = x => { x = Math.max(0, Math.floor(x)); return `${Math.floor(x / 3600
 const exam = {
   id: "exam", icon: "📖", title: "考試", summary: async () => null,
   async render(el) {
-    const ex = { ...EXAM0, ...(await getKV("exam", {})) }; ex.profiles ||= {};
+    const ex = { ...EXAM0, ...(await getKV("exam", {})) }; ex.profiles ||= {}; ex.fixes ||= [];
     const att = await getKV("attendance", {}), list = seatList(), nm = Object.fromEntries(list.map(r => [r.seat, r.name])), T = today();
     const es = att.periodAttendance?.[T]?.["早自修"] || att.attendance?.[T] || {};
     const auto = list.map(r => r.seat).filter(s => ["缺席", "請假"].includes(normSt(es[s])) || (!es[s] && (att.leaves || []).some(l => +l.seat === s && T >= l.startDate && T <= l.endDate)));
@@ -779,7 +793,12 @@ const exam = {
       const ck = $("#exChick"); ck.style.left = pct + "%"; ck.style.transform = `translateX(-${pct}%)`;
       const w = s.mode === "doing" && ex.warn > 0 && s.b - s.s <= ex.warn * 60; $("#exWarn").textContent = w ? `注意：剩不到 ${ex.warn} 分鐘，請檢查姓名與座號` : "";
       if (w && !warned.has(s.i)) { warned.add(s.i); if (ex.ding) ding(); } };
-    const paint = () => { const s = state(), ab = absent(), subs = ex.subjects, cur = subs[s.i];
+    const paint = () => { const s = state(), ab = absent(), subs = ex.subjects, cur = subs[s.i], fx = ex.fixes;
+      const sz = fx.length === 1 ? 4.2 : fx.length === 2 ? 3.4 : 2.8;
+      const fixes = `<div class="exm exfix"><span class="pill" style="background:#EADFC9">試題更正${fx.length ? `（共 ${fx.length} 則）` : ""}</span>
+        <div class="exfh"><button class="chip" id="fxTog">${ex.fixOpen ? "▾ 收合" : "▸ 展開"}</button>${ex.fixOpen ? `<button class="chip" id="fxClr" ${fx.length ? "" : "disabled"}>全部清除</button>` : (fx.length ? `<span class="exfwarn">有 ${fx.length} 則試題更正（已收合）</span>` : `<span class="muted">目前沒有試題更正</span>`)}</div>
+        ${ex.fixOpen ? `<div class="fxadd"><textarea id="fxT" placeholder="輸入試題更正內容，例如：第八題選項修正 D 改成 E"></textarea><button class="btn on" id="fxAdd">發布更正</button></div>
+          ${fx.map((f, i) => `<div class="fxi"><span class="fxn">更正 #${String(i + 1).padStart(2, "0")}</span><span class="fxt">${f.d && f.d !== today() ? f.d.slice(5) + " " : ""}${f.time}</span><button class="chip fxd" data-fd="${f.id}">刪除</button><div class="fxx" style="font-size:${sz}rem">${esc(f.text)}</div></div>`).join("") || `<p class="muted">目前沒有試題更正。</p>`}` : ""}</div>`;
       const left = !cur ? `<div class="exm"><h2>尚未設定科目</h2><p class="muted">請按下方「設定」新增考試科目與時間。</p></div>` : `<div class="exm"><span class="pill" style="background:#F1D6DD">第 ${s.i + 1} 科 / 共 ${subs.length} 科</span>
         <div class="exs"><span class="exn">${esc(cur.name)}</span><span class="exr">${cur.start} – ${cur.end}</span></div>
         ${s.mode === "done" ? `<div class="exc">考試結束，辛苦了！</div>` : `<div class="exc">${s.mode === "doing" ? "距離考試結束還有" : "距離考試開始還有"}<b id="exCd"></b></div><div id="exWarn"></div>
@@ -787,6 +806,7 @@ const exam = {
       $("#exBody").innerHTML = `<div class="extitle"><mark>${esc(ex.title)}</mark></div><div class="exrow">${left}
         <div class="exm"><span class="pill" style="background:#D3E6DE">出缺席</span><div class="exnum"><div style="background:#D9E3E7"><small>應到</small><b>${list.length}</b>人</div><div style="background:#D3E6DE"><small>實到</small><b>${list.length - ab.length}</b>人</div></div>
           <div class="exab"><small>缺席座號</small><div>${ab.length ? ab.map(x => `${x}${nm[x] ? " " + esc(nm[x]) : ""}`).join("、") : "全班到齊！"}</div></div></div></div>
+        ${fixes}
         ${s.mode === "before" ? `<div class="exm exrmbox"><span class="pill" style="background:#EADFC9">考前提醒（點一下可直接修改）</span><div id="exRm" contenteditable="true" data-ph="點這裡輸入提醒，例如：桌面與抽屜清空、準備好文具">${esc(ex.remind)}</div></div>` : ""}
         <div class="exchips">${subs.map((x, i) => { const m = i < s.i || s.mode === "done" ? "done" : i === s.i ? (s.mode === "doing" ? "doing" : "next") : "wait";
           return `<div class="exch ${m}"><div class="exh"><b>${esc(x.name)}</b><span>${{ done: "已結束", doing: "進行中", next: "下一科", wait: "待考" }[m]}</span></div><small>${x.start} – ${x.end}</small></div>`; }).join("")}</div>
@@ -822,9 +842,14 @@ const exam = {
           Object.assign(ex, { title: d.title, subjects: d.subjects, footer: d.footer, absent: d.absent, warn: d.warn, ding: d.ding }); prof(); await save(); ov.remove(); warned.clear(); paint(); } };
       ov.onchange = e => { if (e.target.id === "xT") sw(e.target.value.trim() || d.title); };
       form(); document.body.append(ov); };
-    el.innerHTML = `<div id="exBody"></div>`; bigClock(el);
-    el.onclick = e => { const t = e.target.closest("button"); if (!t) return;
-      if (t.id === "exSet") openSet(); else if (t.id === "exDing") ding(); else if (t.id === "exFs") document.documentElement.requestFullscreen?.(); };
+    el.dataset.pg = "exam"; el.innerHTML = `<div id="exBody"></div>`; bigClock(el);
+    el.onclick = async e => { const t = e.target.closest("button"); if (!t) return;
+      if (t.id === "exSet") openSet(); else if (t.id === "exDing") ding(); else if (t.id === "exFs") document.documentElement.requestFullscreen?.();
+      else if (t.id === "fxTog") { ex.fixOpen = !ex.fixOpen; await save(); paint(); }
+      else if (t.id === "fxAdd") { const v = $("#fxT").value.trim(); if (!v) return; const n = new Date(), z = x => String(x).padStart(2, "0");
+        ex.fixes.push({ id: String(Date.now()), text: v, time: `${z(n.getHours())}:${z(n.getMinutes())}`, d: today() }); ex.fixOpen = true; await save(); paint(); }
+      else if (t.dataset.fd) { ex.fixes = ex.fixes.filter(x => x.id !== t.dataset.fd); await save(); paint(); }
+      else if (t.id === "fxClr") { if (!confirm("確定清除全部試題更正？")) return; ex.fixes = []; await save(); paint(); } };
     el.onfocusout = async e => { if (e.target.id === "exRm") { ex.remind = e.target.innerText.replace(/\n+$/, ""); prof(); await save(); } };
     paint(); window.__iv2 = setInterval(tickEx, 1000);
   }
@@ -893,7 +918,7 @@ const onRemote = async keys => { if (hooks.size) { for (const h of hooks) await 
   if (document.querySelector(".projw.ov, .mproj")) return; refresh(); };
 function go(id) { cur = id;
   $("#nav").innerHTML = MODS.map(m => `<button data-go="${m.id}" class="${m.id === id ? "on" : ""}"><span>${m.icon}</span><span class="t">${m.title}</span></button>`).join("");
-  clearInterval(window.__iv); clearInterval(window.__iv2); const el = $("#view"); el.onclick = el.onchange = null; el.removeAttribute("data-sj"); el.innerHTML = "";
+  clearInterval(window.__iv); clearInterval(window.__iv2); const el = $("#view"); el.onclick = el.onchange = null; el.removeAttribute("data-sj"); el.removeAttribute("data-pg"); el.innerHTML = "";
   Promise.resolve(MODS.find(m => m.id === id).render(el)).catch(err => el.innerHTML = `<div class="card"><h2>這一頁載入失敗</h2><p class="muted">${esc(err.message)}</p></div>`);
 }
 document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
