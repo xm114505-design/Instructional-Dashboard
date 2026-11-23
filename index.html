@@ -204,8 +204,8 @@ header{justify-content:flex-start;gap:0}
 @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 
 .wgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:10px 6px;margin:10px 0}
-.wk{background:transparent;border:3px solid transparent;border-radius:18px;padding:6px 2px;display:grid;justify-items:center;gap:2px;cursor:pointer}
-.wk.sel{background:#D3E6DE;border-color:#4F7A69}
+.wpt{background:transparent;border:3px solid transparent;border-radius:18px;padding:6px 2px;display:grid;justify-items:center;gap:2px;cursor:pointer}
+.wpt.sel{background:#D3E6DE;border-color:#4F7A69}
 .av{position:relative;display:block;width:84px;height:84px}
 .av img{width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.22);background:#fff}
 .bd{position:absolute;top:-6px;right:-12px;min-width:38px;height:38px;border-radius:999px;background:#2E8B57;color:#fff;font-size:1rem;display:grid;place-items:center;padding:0 6px;border:2px solid #fff}
@@ -905,7 +905,7 @@ const weekly = {
     const draw = () => { const dis = this.sel.size ? "disabled" : "", ok = this.sel.size ? "" : "disabled";
       el.innerHTML = `<h2>每週點數 <small>本週 ${W.wk.slice(5)} 起</small></h2>
         <div class="wgrid">${list.map((r, i) => { const t = W.pts[r.seat] || 0, y = tally(W.dots[r.seat]);
-          return `<button class="wk ${this.sel.has(r.seat) ? "sel" : ""}" data-s="${r.seat}"><span class="av"><img src="${ANIMALS[W.av[r.seat] ?? i % ANIMALS.length].u}" alt=""><b class="bd ${t < 0 ? "neg" : ""}">${t}</b></span>
+          return `<button class="wpt ${this.sel.has(r.seat) ? "sel" : ""}" data-s="${r.seat}"><span class="av"><img src="${ANIMALS[W.av[r.seat] ?? i % ANIMALS.length].u}" alt=""><b class="bd ${t < 0 ? "neg" : ""}">${t}</b></span>
             <span class="wn">${String(r.seat).padStart(2, "0")}${esc(r.name)}</span><span class="dts">${["y", "r", "b", "g", "w"].filter(c => y[c]).map(c => `<i class="dt" style="background:${DOTS[c][1]};color:${DOTS[c][2]}">${y[c]}</i>`).join("")}</span></button>`; }).join("")}</div>
         <div class="bar"><b>已選 ${this.sel.size} 人</b><button class="chip" data-all="1">全選／取消全班</button><button class="chip" id="wEl">每週點數全選（自動排除紅／藍點）</button><button class="btn on" id="wBase" ${ok}>每週基本分 (+5)</button><button class="chip" id="wUndo">復原上一步</button><span class="muted">${esc(this.msg)}</span></div>
         <div class="wbar">${DOT_BTNS.map(([c, n, v]) => `<button class="db ${c}" style="background:${DOTS[c][1]};color:${DOTS[c][2]}" data-c="${c}" data-n="${n}" data-v="${v}" ${ok}>${c === "b" ? "" : n}${DOTS[c][0]} (${v > 0 ? "+" : ""}${v})</button>`).join("")}</div>
