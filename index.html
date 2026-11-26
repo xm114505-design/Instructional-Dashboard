@@ -265,6 +265,12 @@ details summary{cursor:pointer;margin:10px 0;font-weight:700}
 .pb.o{background:#4FA36B}
 .pb.x{background:#D6615A}
 
+.row.pend{background:#FBEFF1;border-color:#E3A8B2}
+.pendb{background:#F1D6DD;color:#7A3A4A;font-weight:700}
+select.ps{min-height:42px;font-weight:700}
+select.ps.warn{background:#F1D6DD;color:#7A3A4A}
+
+
 </style>
 </head>
 <body>
@@ -522,6 +528,28 @@ const attendance = {
     const stOf = (d, p, s) => normSt(a.periodAttendance[d]?.[p]?.[s]) || (leaveOf(s, d) ? "請假" : p === "早自修" && rdOf(d, s).length ? "公差" : "準時");
     const eSt = (d, s) => normSt(a.periodAttendance[d]?.["早自修"]?.[s]) || normSt(a.attendance[d]?.[s]) || (leaveOf(s, d) ? "請假" : rdOf(d, s).length ? "公差" : "準時");
     const len = l => Math.round((new Date(l.endDate) - new Date(l.startDate)) / 864e5) + 1;
+    const PSL = ["未送", "已送", "無須送"], dayOf = l => l.days ?? len(l);
+    // 假單簽核：滿 2.5 天（週三半天，實際等於 3 天）需送學校；舊資料的舊名稱自動對應
+    const psOf = l => ({ "未送件": "未送", "已送件": "已送", "免簽核": "無須送" }[l.paperStatus] || l.paperStatus || (dayOf(l) >= 2.5 ? "未送" : "無須送"));
+    const pendBanner = () => { const p = [...a.leaves.filter(l => psOf(l) === "未送").map(l => `${l.seat}號 ${esc(l.name || names[l.seat] || "")}`), ...streaks().filter(s => stS(s) === "未送").map(s => `${s.seat}號 ${esc(names[s.seat] || "")}（連續請假累計 ${s.total} 天）`)];
+      return p.length ? `<div class="brd pendb">尚有 ${p.length} 張長假單未送（請假滿 2.5 天，或一天一天請的連續累計滿 2.5 天，需送學校）：${p.join("、")}</div>` : ""; };
+    // ---- 天數自動計算（週三半天算 0.5，週末不算）與「一天一天請」的連續請假累計 ----
+    const WDW = g => ({ 1: 1, 2: 1, 3: .5, 4: 1, 5: 1 }[g] || 0);
+    const dayList = (sd, ed) => { const out = []; for (let d = new Date(sd + "T00:00:00"), z = new Date((ed || sd) + "T00:00:00"); d <= z; d.setDate(d.getDate() + 1)) { const w = WDW(d.getDay()); if (w) out.push([ymd(d), w]); } return out; };
+    const autoDays = (sd, ed) => dayList(sd, ed).reduce((x, [, w]) => x + w, 0);
+    const nextSchoolDay = d => { const x = new Date(d + "T00:00:00"); do { x.setDate(x.getDate() + 1); } while (!WDW(x.getDay())); return ymd(x); };
+    const streaks = () => { const res = [], bySeat = {}; a.leaves.forEach(l => (bySeat[l.seat] ||= []).push(l));
+      Object.entries(bySeat).forEach(([seat, ls]) => { const W = {}, src = {};
+        ls.forEach(l => { const dl = dayList(l.startDate, l.endDate || l.startDate); if (!dl.length) return; const rule = dl.reduce((x, [, w]) => x + w, 0), k = (Number(dayOf(l)) || rule) / rule;
+          dl.forEach(([d, w]) => { W[d] = Math.max(W[d] || 0, w * k); (src[d] ||= new Set()).add(l.id); }); });
+        let cur = null; const flush = () => { if (cur && cur.ids.size >= 2 && cur.total >= 2.5 && ![...cur.ids].some(id => dayOf(a.leaves.find(x => x.id === id)) >= 2.5))
+            res.push({ seat: +seat, start: cur.start, end: cur.end, total: cur.total, key: seat + "|" + cur.start, ids: [...cur.ids] }); cur = null; };
+        Object.keys(W).sort().forEach(d => { if (cur && nextSchoolDay(cur.end) === d) { cur.end = d; cur.total += W[d]; src[d].forEach(i => cur.ids.add(i)); } else { flush(); cur = { start: d, end: d, total: W[d], ids: new Set(src[d]) }; } });
+        flush(); });
+      return res.sort((x, y) => y.start.localeCompare(x.start)); };
+    const stS = s => (a.streakPaper || {})[s.key] || "未送";
+    const streakHtml = () => { const ss = streaks(); return ss.length ? `<div class="card" style="margin:10px 0"><h3 style="margin:0 0 6px">連續請假累計提醒</h3><p class="muted" style="margin:0 0 8px">同一位學生一天一天請假，連續累計滿 2.5 天，也需要補送長假單。</p>
+      ${ss.map(s => `<div class="row ${stS(s) === "未送" ? "pend" : ""}"><span>${nm(s.seat)}　${s.start}～${s.end}　累計 ${s.total} 天（${s.ids.length} 張假單）</span><select class="ps ${stS(s) === "未送" ? "warn" : ""}" data-sp="${s.key}">${PSL.map(o => `<option ${o === stS(s) ? "selected" : ""}>${o}</option>`).join("")}</select></div>`).join("")}</div>` : ""; };
     const gcal = l => { const z = d => String(d || "").replace(/-/g, ""), ed = l.endDate || l.startDate, nx = ymd(new Date(new Date(ed + "T00:00:00").getTime() + 864e5));
       const q = new URLSearchParams({ text: `${l.seat}號 ${names[l.seat] || ""} ${l.type || "請假"}`, dates: `${z(l.startDate)}/${z(nx)}`, details: l.reason || "" });
       if (ctx.cfg.calEmail) q.set("authuser", ctx.cfg.calEmail);
@@ -538,16 +566,16 @@ const attendance = {
       board: () => { const e = Object.fromEntries(nums.map(s => [s, eSt(this.date, s)])), cnt = k => nums.filter(s => e[s] === k), dw = dow(this.date);
         const td = a.tempDuties.filter(t => t.date === this.date), rd = dw ? a.routineDuties.filter(r => (r.days || []).map(String).some(x => x === String(dw) || x === DN[dw - 1])) : [];
         const box = (t, it) => `<div class="card"><h3>${t}（${it.length}）</h3>${it.map(x => `<div>${x}</div>`).join("") || `<p class="muted">無</p>`}</div>`;
-        return `<div class="g2"><div class="card"><small>應到</small><h2>${nums.length}</h2></div><div class="card"><small>實到</small><h2>${nums.length - cnt("缺席").length - cnt("請假").length - cnt("公差").length}</h2></div></div>
+        return `${pendBanner()}<div class="g2"><div class="card"><small>應到</small><h2>${nums.length}</h2></div><div class="card"><small>實到</small><h2>${nums.length - cnt("缺席").length - cnt("請假").length - cnt("公差").length}</h2></div></div>
         <div class="g2">${box("請假", cnt("請假").map(s => nm(s) + "　" + esc(leaveOf(s, this.date)?.reason || "")))}${box("遲到", cnt("遲到").map(nm))}${box("缺席", cnt("缺席").map(nm))}
         ${box("公差", cnt("公差").map(s => nm(s) + "　" + esc(rdOf(this.date, s).join("、"))))}${box("臨時公差", td.map(t => `${nm(+t.seat)}　${esc(t.reason || "")}（${(t.periodsList || []).join("、")}）`))}</div>`; },
       leave: () => { const ls = [...a.leaves].sort((x, y) => y.startDate.localeCompare(x.startDate)), LT = ["事假", "病假", "公假", "喪假"], dy = l => l.days ?? len(l);
         const [cy, cmn] = this.cm.split("-").map(Number), dim = new Date(cy, cmn, 0).getDate(), pad = new Date(cy, cmn - 1, 1).getDay();
         const cal = [...Array(pad).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)].map(d => { if (!d) return "<span></span>"; const ds = `${cy}-${String(cmn).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           return `<div class="cd ${ds === today() ? "td" : ""}"><small>${d}</small>${a.leaves.filter(l => ds >= l.startDate && ds <= l.endDate).map(l => `<div class="lv">${l.seat}號 ${esc(l.name || names[l.seat] || "")}（${esc(l.type || "請假")}）</div>`).join("")}</div>`; }).join("");
-        return `<div class="bar"><input id="lS" type="number" placeholder="座號" style="width:90px"><select id="lT" style="width:110px">${LT.map(t => `<option>${t}</option>`).join("")}</select><input id="lD" type="number" step="0.5" min="0.5" value="1" style="width:90px" title="天數（可 0.5）">
-        <input id="lA" type="date" style="width:170px"><input id="lB" type="date" style="width:170px"><input id="lR" placeholder="事由（選填）" style="width:200px"><button class="btn on" id="lAdd">儲存假單</button></div>
-        ${ls.map(l => `<div class="row"><span>${nm(+l.seat)}　${esc(l.type || "請假")} ${dy(l)} 天　${l.startDate}～${l.endDate}　${esc(l.reason || "")}</span><span>${dy(l) >= 3 ? `<button class="chip ${l.paperStatus === "已送件" ? "on" : ""}" data-pp="${l.id}">${l.paperStatus || "未送件"}</button>` : `<span class="muted">免簽核</span>`} <a class="chip" target="_blank" rel="noopener" href="${gcal(l)}">加入 Google 日曆</a> <button class="chip" data-lr="${l.id}">刪除</button></span></div>`).join("") || `<p class="muted">目前沒有請假紀錄。</p>`}
+        return `${pendBanner()}<div class="bar"><input id="lS" type="number" placeholder="座號" style="width:90px"><select id="lT" style="width:110px">${LT.map(t => `<option>${t}</option>`).join("")}</select><input id="lD" type="number" step="0.5" min="0.5" value="1" style="width:90px" title="天數（可 0.5）">
+        <input id="lA" type="date" style="width:170px"><input id="lB" type="date" style="width:170px"><input id="lR" placeholder="事由（選填）" style="width:200px"><button class="btn on" id="lAdd">儲存假單</button></div><p class="muted" style="margin:0 0 8px">選好起訖日會自動算天數（週三半天算 0.5，週末不算），可再手動修改。</p>${streakHtml()}
+        ${ls.map(l => `<div class="row ${psOf(l) === "未送" ? "pend" : ""}"><span>${nm(+l.seat)}　${esc(l.type || "請假")} ${dy(l)} 天　${l.startDate}～${l.endDate}　${esc(l.reason || "")}</span><span><select class="ps ${psOf(l) === "未送" ? "warn" : ""}" data-ps="${l.id}" title="假單簽核狀態">${PSL.map(o => `<option ${o === psOf(l) ? "selected" : ""}>${o}</option>`).join("")}</select> <a class="chip" target="_blank" rel="noopener" href="${gcal(l)}">加入 Google 日曆</a> <button class="chip" data-lr="${l.id}">刪除</button></span></div>`).join("") || `<p class="muted">目前沒有請假紀錄。</p>`}
         <p><button class="chip" id="lIcs">匯出全部 .ics</button></p>
         <h3>全班當月請假月曆</h3><div class="bar"><button class="chip" data-cm="-1">◀</button><b>${cy} 年 ${cmn} 月</b><button class="chip" data-cm="1">▶</button></div>
         <div class="cal">${"日一二三四五六".split("").map(w => `<b>${w}</b>`).join("")}${cal}</div>`; },
@@ -587,14 +615,13 @@ const attendance = {
       else if (d.seat) { const s = +d.seat, nx = ST[(ST.indexOf(stOf(this.date, this.period, s)) + 1) % 5];
         ((a.periodAttendance[this.date] ||= {})[this.period] ||= {})[s] = nx; if (this.period === "早自修") (a.attendance[this.date] ||= {})[s] = nx; persist(); }
       else if (d.cm) { const [y, m] = this.cm.split("-").map(Number), n = new Date(y, m - 1 + +d.cm, 1); this.cm = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`; }
-      else if (d.pp) { const l = a.leaves.find(x => x.id === d.pp); l.paperStatus = l.paperStatus === "已送件" ? "未送件" : "已送件"; persist(); }
       else if (t.id === "rAll") { if (!confirm("清除本時段的手動標記，全班恢復到齊？（請假與例行公差會保留）")) return; delete a.periodAttendance[this.date]?.[this.period]; if (this.period === "早自修") delete a.attendance[this.date]; persist(); }
       else if (d.lr) { a.leaves = a.leaves.filter(l => l.id !== d.lr); persist(); }
       else if (d.dt) { a.tempDuties = a.tempDuties.filter(x => x.id !== d.dt); persist(); }
       else if (d.rt) { a.routineDuties = a.routineDuties.filter(x => x.id !== d.rt); persist(); }
       else if (d.csv) return dlCSV(`${d.csv === "week" ? "每週點名週表" : "期末出缺勤統計"}_${today()}.csv`, d.csv === "week" ? this.rows : this.trows);
       else if (t.id === "lAdd") { const s = +v("#lS"), sd = v("#lA"); if (!s || !sd) return; const days = Number(v("#lD")) || 1;
-        a.leaves.push({ id: "leave_" + Date.now(), seat: s, name: names[s] || "", type: v("#lT"), days, startDate: sd, endDate: v("#lB") || sd, reason: v("#lR"), paperStatus: days >= 3 ? "未送件" : "免簽核" }); persist(); }
+        a.leaves.push({ id: "leave_" + Date.now(), seat: s, name: names[s] || "", type: v("#lT"), days, startDate: sd, endDate: v("#lB") || sd, reason: v("#lR"), paperStatus: days >= 2.5 ? "未送" : "無須送" }); persist(); }
       else if (t.id === "dAdd") { const s = +v("#dS"), pl = [...el.querySelectorAll(".dP:checked")].map(x => x.value); if (!s || !pl.length) return;
         a.tempDuties.push({ id: "tp_" + Date.now(), seat: s, name: names[s] || "", date: v("#dD") || this.date, periodsList: pl, reason: v("#dR") }); persist(); }
       else if (t.id === "rAdd") { const s = +v("#rS"), ds = [...el.querySelectorAll(".rD:checked")].map(x => +x.value); if (!s || !v("#rT") || !ds.length) return;
@@ -604,6 +631,10 @@ const attendance = {
       else if (t.id === "qPrint") return window.print();
       else return;
       draw(); };
+    el.onchange = e => { const tg = e.target;
+      if (tg.id === "lA" || tg.id === "lB") { const sd = $("#lA").value; if (sd && !$("#lB").value) $("#lB").value = sd; const ed = $("#lB").value || sd; if (sd && ed >= sd) $("#lD").value = autoDays(sd, ed); return; }
+      if (tg.dataset.sp) { (a.streakPaper ||= {})[tg.dataset.sp] = tg.value; persist(); draw(); return; }
+      const id = e.target.dataset.ps; if (!id) return; const l = a.leaves.find(x => x.id === id); l.paperStatus = e.target.value; persist(); draw(); };
     draw();
   }
 };
